@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Shield,
@@ -72,6 +72,43 @@ interface AgentPanelProps {
 
 export function AgentPanel({ data, loading, onAction }: AgentPanelProps) {
   const [expanded, setExpanded] = useState<AgentType | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [calendarEventIds, setCalendarEventIds] = useState<Record<string, string>>({});
+  const hasExported = Object.keys(calendarEventIds).length > 0;
+
+  const handleExportCalendar = useCallback(async () => {
+    if (!data.itinerary || exporting) return;
+    setExporting(true);
+    try {
+      const res = await fetch('/api/export/calendar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          schedule: data.itinerary,
+          tripName: 'My Trip',
+          destination: '',
+          startDate: data.itinerary[0]?.date ?? new Date().toISOString().split('T')[0],
+          existingEventIds: calendarEventIds,
+        }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        // Store event IDs for future syncs
+        if (result.eventIds) {
+          setCalendarEventIds(result.eventIds);
+        }
+        const action = hasExported ? 'updated' : 'added to';
+        alert(`✅ Itinerary ${action} your Google Calendar!`);
+      } else {
+        alert('❌ Export failed: ' + (result.error ?? 'Unknown error'));
+      }
+    } catch (err) {
+      alert('❌ Could not connect to export service');
+      console.error(err);
+    } finally {
+      setExporting(false);
+    }
+  }, [data.itinerary, exporting, calendarEventIds, hasExported]);
 
   const visibleAgents = AGENTS.filter(a => loading.has(a.id) || data[a.id] !== undefined);
   if (visibleAgents.length === 0) return null;
@@ -171,7 +208,11 @@ export function AgentPanel({ data, loading, onAction }: AgentPanelProps) {
             transition={{ delay: 0.1 }}
             className="mt-4 -mx-2"
           >
-            <KanbanBoard schedule={data.itinerary} />
+            <KanbanBoard
+              schedule={data.itinerary}
+              onExportCalendar={handleExportCalendar}
+              exportLabel={exporting ? 'Exporting...' : hasExported ? 'Update Calendar' : 'Export to Calendar'}
+            />
           </motion.div>
         )}
       </AnimatePresence>

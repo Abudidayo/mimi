@@ -100,10 +100,11 @@ function renderSegment(
     );
   }
   if (segment.type === 'date') {
+    const defaultDate = segment.props?.defaultDate ? new Date(segment.props.defaultDate + 'T00:00:00') : new Date();
     return (
       <DatePicker
         key={key}
-        value={controlValues[id] ?? new Date()}
+        value={controlValues[id] ?? defaultDate}
         onChange={(v) => onControlChange(id, v)}
         color={color}
       />

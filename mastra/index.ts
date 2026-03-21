@@ -9,6 +9,7 @@ import { flightsAgent } from './agents/flights';
 import { plannerAgent } from './agents/planner';
 import { suggestionsAgent } from './agents/suggestions';
 import { supervisorAgent } from './agents/supervisor';
+import { calendarAgent } from './agents/calendar';
 
 export const mastra = new Mastra({
   agents: {
@@ -21,6 +22,7 @@ export const mastra = new Mastra({
     flightsAgent,
     plannerAgent,
     suggestionsAgent,
+    calendarAgent,
     supervisor: supervisorAgent,
   },
 });

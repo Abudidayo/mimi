@@ -48,21 +48,21 @@ const STARS: StarDot[] = Array.from({ length: 110 }, (_, i) => ({
 const SUGGESTIONS = [
   {
     label: "7 days in Japan 🇯🇵",
-    prompt: "Plan a 7-day trip to Japan for 2 people with a budget of $3000 per person",
+    prompt: "Plan a 7-day trip to Japan",
     gradient: "radial-gradient(ellipse at 50% 15%, #ffcbb8 0%, #f87868 28%, #e84830 62%, #c83018 100%)",
     shadowRgb: "160,36,14",
     topHighlight: "rgba(255,220,205,0.6)",
   },
   {
     label: "Paris art & food 🥐",
-    prompt: "I want to visit Paris for 5 nights, I love art and food",
+    prompt: "Plan a 5-day trip to Paris",
     gradient: "radial-gradient(ellipse at 50% 15%, #c8e8ff 0%, #74b8ff 28%, #3e88f0 62%, #2060cc 100%)",
     shadowRgb: "22,72,160",
     topHighlight: "rgba(210,235,255,0.6)",
   },
   {
     label: "Bali beach escape 🌊",
-    prompt: "Plan a beach vacation to Bali, budget-friendly for a solo traveler",
+    prompt: "Plan a beach trip to Bali",
     gradient: "radial-gradient(ellipse at 50% 15%, #b8f8d4 0%, #52e08a 28%, #1ec862 62%, #14a048 100%)",
     shadowRgb: "12,110,48",
     topHighlight: "rgba(195,255,220,0.6)",

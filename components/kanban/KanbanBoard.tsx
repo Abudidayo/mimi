@@ -46,9 +46,10 @@ interface KanbanBoardProps {
   schedule: DaySchedule[];
   onScheduleChange?: (schedule: DaySchedule[]) => void;
   onExportCalendar?: () => void;
+  exportLabel?: string;
 }
 
-export function KanbanBoard({ schedule: initialSchedule, onScheduleChange, onExportCalendar }: KanbanBoardProps) {
+export function KanbanBoard({ schedule: initialSchedule, onScheduleChange, onExportCalendar, exportLabel }: KanbanBoardProps) {
   const [schedule, setSchedule] = useState<DaySchedule[]>(initialSchedule);
   const [activeActivity, setActiveActivity] = useState<Activity | null>(null);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
@@ -189,7 +190,7 @@ export function KanbanBoard({ schedule: initialSchedule, onScheduleChange, onExp
           className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
         >
           <Download className="w-5 h-5" />
-          Export to Calendar
+          {exportLabel ?? 'Export to Calendar'}
         </button>
       </div>
 
