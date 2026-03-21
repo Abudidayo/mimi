@@ -11,6 +11,7 @@ import { bookingAgent } from './agents/booking';
 import { plannerAgent } from './agents/planner';
 import { suggestionsAgent } from './agents/suggestions';
 import { supervisorAgent } from './agents/supervisor';
+import { calendarAgent } from './agents/calendar';
 
 export const mastra = new Mastra({
   agents: {
@@ -25,6 +26,7 @@ export const mastra = new Mastra({
     bookingAgent,
     plannerAgent,
     suggestionsAgent,
+    calendarAgent,
     supervisor: supervisorAgent,
   },
 });

@@ -70,7 +70,7 @@ type Message = { role: 'user' | 'assistant'; content: Anthropic.MessageParam['co
  * Uses the per-user Civic Auth token when available,
  * falls back to static CIVIC_TOKEN for development.
  */
-export async function callCivic(prompt: string, maxTokens = 4096) {
+export async function callCivic(prompt: string, maxTokens = 4096, model = 'claude-sonnet-4-20250514') {
   const civicUrl = envOrFile('CIVIC_URL') ?? 'https://app.civic.com/hub/mcp';
   const civicToken = await getCivicToken();
   const client = getClient();
@@ -90,7 +90,7 @@ export async function callCivic(prompt: string, maxTokens = 4096) {
 
   for (let turn = 0; turn < MAX_TURNS; turn++) {
     const body = {
-      model: 'claude-sonnet-4-20250514',
+      model,
       max_tokens: maxTokens,
       messages,
       tools: [mcpToolset],

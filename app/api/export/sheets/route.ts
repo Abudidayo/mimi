@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { callCivic, extractText } from '@/lib/civic/client';
 
 export const runtime = 'nodejs';
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 interface Activity {
   name: string;
@@ -40,11 +40,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No itinerary to export' }, { status: 400 });
     }
 
+    // Compute actual dates from startDate + day offset
+    const resolveDate = (day: DaySchedule): string => {
+      // If date already looks like a real date (YYYY-MM-DD), use it
+      if (day.date && /^\d{4}-\d{2}-\d{2}/.test(day.date)) return day.date;
+      // Otherwise compute from startDate
+      if (startDate) {
+        const d = new Date(startDate);
+        d.setDate(d.getDate() + (day.day - 1));
+        return d.toISOString().split('T')[0];
+      }
+      return day.date || `Day ${day.day}`;
+    };
+
     // Build a tabular representation for the spreadsheet
     const rows = schedule.flatMap((day) =>
       day.activities.map((a) => ({
         day: day.day,
-        date: day.date,
+        date: resolveDate(day),
         theme: day.theme ?? '',
         time: a.startTime ?? '',
         activity: a.name,
@@ -64,46 +77,24 @@ export async function POST(req: Request) {
     const tableDescription = rows
       .map(
         (r) =>
-          `Day ${r.day} | ${r.time} | ${r.activity} | ${r.duration} min | ${r.location} | $${r.priceUSD} | ${r.localCurrency} ${r.priceLocal} | Booking: ${r.booking} | ${r.description}`,
+          `Day ${r.day} | ${r.date} | ${r.time} | ${r.activity} | ${r.duration} min | ${r.location} | $${r.priceUSD} | ${r.localCurrency} ${r.priceLocal} | Booking: ${r.booking} | ${r.description}`,
       )
       .join('\n');
 
     const localCurrencyName = currency?.to ?? 'USD';
-    const prompt = `Create a Google Spreadsheet titled "${tripName} — Budget & Itinerary" with two sheets: "Itinerary" and "Budget Summary".
+    const prompt = `Create a Google Spreadsheet titled "${tripName} — Budget & Itinerary".
 
-**Sheet 1: "Itinerary"**
-Create a table with these columns:
-- Day
-- Date
-- Theme
-- Time
-- Activity
-- Duration (min)
-- Location
-- Price (USD)
-- Price (${localCurrencyName})
-- Booking Required
-- Description
+Add these columns: Day | Date | Time | Activity | Duration (min) | Location | Price (USD) | Price (${localCurrencyName}) | Booking | Description
 
-Data rows:
+Data:
 ${tableDescription}
 
-Add a TOTAL row at the bottom: Total USD = $${totalUSD}, Total ${localCurrencyName} = ${totalLocal}
+Last row: TOTAL | | | | | | $${totalUSD} | ${localCurrencyName} ${totalLocal}
+${currency ? `Exchange rate: 1 ${currency.from} = ${currency.rate} ${currency.to}` : ''}
 
-**Sheet 2: "Budget Summary"**
-Create a summary with:
-- Trip: ${tripName}
-- Destination: ${destination}
-${startDate ? `- Start Date: ${startDate}` : ''}
-${travelers ? `- Travelers: ${travelers}` : ''}
-- Total per person: $${totalUSD} (${localCurrencyName} ${totalLocal})
-${travelers ? `- Total for group: $${totalUSD * travelers} (${localCurrencyName} ${totalLocal * travelers})` : ''}
-${currency ? `- Exchange rate: 1 ${currency.from} = ${currency.rate} ${currency.to}` : ''}
-- Day-by-day cost breakdown (sum prices per day)
+After creating, provide the Google Sheets link.`;
 
-After creating the spreadsheet, provide the Google Sheets link.`;
-
-    const response = await callCivic(prompt);
+    const response = await callCivic(prompt, 4096, 'claude-haiku-4-5-20251001');
     const text = extractText(response);
 
     // Try to extract the sheet URL from the response

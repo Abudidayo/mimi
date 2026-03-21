@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Shield,
@@ -80,6 +80,126 @@ interface AgentPanelProps {
 
 export function AgentPanel({ data, loading, onAction }: AgentPanelProps) {
   const [expanded, setExpanded] = useState<AgentType | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [calendarEventIds, setCalendarEventIds] = useState<Record<string, string>>({});
+  const hasExported = Object.keys(calendarEventIds).length > 0;
+
+  const handleExportCalendar = useCallback(async () => {
+    if (!data.itinerary || exporting) return;
+    setExporting(true);
+    try {
+      const res = await fetch('/api/export/calendar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          schedule: data.itinerary,
+          tripName: 'My Trip',
+          destination: '',
+          startDate: (/^\d{4}-\d{2}-\d{2}/.test(data.itinerary[0]?.date ?? '')) ? data.itinerary[0].date : new Date().toISOString().split('T')[0],
+          existingEventIds: calendarEventIds,
+        }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        // Store event IDs for future syncs
+        if (result.eventIds) {
+          setCalendarEventIds(result.eventIds);
+        }
+        const action = hasExported ? 'updated' : 'added to';
+        alert(`✅ Itinerary ${action} your Google Calendar!`);
+      } else {
+        alert('❌ Export failed: ' + (result.error ?? 'Unknown error'));
+      }
+    } catch (err) {
+      alert('❌ Could not connect to export service');
+      console.error(err);
+    } finally {
+      setExporting(false);
+    }
+  }, [data.itinerary, exporting, calendarEventIds, hasExported]);
+
+  const [exportingDocs, setExportingDocs] = useState(false);
+  const [docUrl, setDocUrl] = useState<string | null>(null);
+  const [exportingSheets, setExportingSheets] = useState(false);
+  const [sheetUrl, setSheetUrl] = useState<string | null>(null);
+
+  const handleExportDocs = useCallback(async () => {
+    if (!data.itinerary || exportingDocs) return;
+    setExportingDocs(true);
+    try {
+      const res = await fetch('/api/export/docs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          schedule: data.itinerary,
+          tripName: 'My Trip',
+          destination: '',
+          startDate: (/^\d{4}-\d{2}-\d{2}/.test(data.itinerary[0]?.date ?? '')) ? data.itinerary[0].date : new Date().toISOString().split('T')[0],
+          travelers: undefined,
+          budget: undefined,
+          currency: data.currency ? { from: data.currency.from, to: data.currency.to, rate: data.currency.rate } : undefined,
+        }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        if (result.docUrl) {
+          setDocUrl(result.docUrl);
+          const opened = window.open(result.docUrl, '_blank');
+          if (!opened) {
+            // Popup blocked — prompt user to click
+            alert(`✅ Exported! Open your doc here:\n${result.docUrl}`);
+          }
+        } else {
+          alert('✅ Trip itinerary exported to Google Docs!');
+        }
+      } else {
+        alert('❌ Export failed: ' + (result.error ?? 'Unknown error'));
+      }
+    } catch (err) {
+      alert('❌ Could not connect to export service');
+      console.error(err);
+    } finally {
+      setExportingDocs(false);
+    }
+  }, [data.itinerary, data.currency, exportingDocs]);
+
+  const handleExportSheets = useCallback(async () => {
+    if (!data.itinerary || exportingSheets) return;
+    setExportingSheets(true);
+    try {
+      const res = await fetch('/api/export/sheets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          schedule: data.itinerary,
+          tripName: 'My Trip',
+          destination: '',
+          startDate: (/^\d{4}-\d{2}-\d{2}/.test(data.itinerary[0]?.date ?? '')) ? data.itinerary[0].date : new Date().toISOString().split('T')[0],
+          travelers: undefined,
+          currency: data.currency ? { from: data.currency.from, to: data.currency.to, rate: data.currency.rate } : undefined,
+        }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        if (result.sheetUrl) {
+          setSheetUrl(result.sheetUrl);
+          const opened = window.open(result.sheetUrl, '_blank');
+          if (!opened) {
+            alert(`✅ Exported! Open your spreadsheet here:\n${result.sheetUrl}`);
+          }
+        } else {
+          alert('✅ Trip budget exported to Google Sheets!');
+        }
+      } else {
+        alert('❌ Export failed: ' + (result.error ?? 'Unknown error'));
+      }
+    } catch (err) {
+      alert('❌ Could not connect to export service');
+      console.error(err);
+    } finally {
+      setExportingSheets(false);
+    }
+  }, [data.itinerary, data.currency, exportingSheets]);
 
   const visibleAgents = AGENTS.filter(a => loading.has(a.id) || data[a.id] !== undefined);
   if (visibleAgents.length === 0) return null;
@@ -181,7 +301,17 @@ export function AgentPanel({ data, loading, onAction }: AgentPanelProps) {
             transition={{ delay: 0.1 }}
             className="mt-4 -mx-2"
           >
-            <KanbanBoard schedule={data.itinerary} />
+            <KanbanBoard
+              schedule={data.itinerary}
+              onExportCalendar={handleExportCalendar}
+              onExportDocs={handleExportDocs}
+              onExportSheets={handleExportSheets}
+              exportLabel={exporting ? 'Exporting...' : hasExported ? 'Update Calendar' : 'Export to Calendar'}
+              docsLabel={exportingDocs ? 'Exporting...' : docUrl ? 'Re-export to Docs' : 'Export to Docs'}
+              sheetsLabel={exportingSheets ? 'Exporting...' : sheetUrl ? 'Re-export to Sheets' : 'Export to Sheets'}
+              docUrl={docUrl}
+              sheetUrl={sheetUrl}
+            />
           </motion.div>
         )}
       </AnimatePresence>

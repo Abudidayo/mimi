@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   DndContext,
   DragEndEvent,
@@ -14,7 +14,7 @@ import {
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, CalendarBlank, Download } from '@phosphor-icons/react';
+import { X, CalendarBlank, Download, FileText, Table, ArrowSquareOut, CaretDown } from '@phosphor-icons/react';
 import { KanbanColumn } from './KanbanColumn';
 import { KanbanCard } from './KanbanCard';
 
@@ -46,12 +46,30 @@ interface KanbanBoardProps {
   schedule: DaySchedule[];
   onScheduleChange?: (schedule: DaySchedule[]) => void;
   onExportCalendar?: () => void;
+  onExportDocs?: () => void;
+  onExportSheets?: () => void;
+  exportLabel?: string;
+  docsLabel?: string;
+  sheetsLabel?: string;
+  docUrl?: string | null;
+  sheetUrl?: string | null;
 }
 
-export function KanbanBoard({ schedule: initialSchedule, onScheduleChange, onExportCalendar }: KanbanBoardProps) {
+export function KanbanBoard({ schedule: initialSchedule, onScheduleChange, onExportCalendar, onExportDocs, onExportSheets, exportLabel, docsLabel, sheetsLabel, docUrl, sheetUrl }: KanbanBoardProps) {
   const [schedule, setSchedule] = useState<DaySchedule[]>(initialSchedule);
   const [activeActivity, setActiveActivity] = useState<Activity | null>(null);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+  const [exportMenu, setExportMenu] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (exportRef.current && !exportRef.current.contains(e.target as Node)) setExportMenu(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -184,13 +202,71 @@ export function KanbanBoard({ schedule: initialSchedule, onScheduleChange, onExp
           </p>
         </div>
 
-        <button
-          onClick={onExportCalendar}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-        >
-          <Download className="w-5 h-5" />
-          Export to Calendar
-        </button>
+        <div ref={exportRef} className="relative">
+          <button
+            onClick={() => setExportMenu((v) => !v)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+          >
+            <Download className="w-5 h-5" />
+            Export
+            <CaretDown className={`w-4 h-4 transition-transform ${exportMenu ? 'rotate-180' : ''}`} />
+          </button>
+
+          {exportMenu && (
+            <div className="absolute right-0 mt-1 z-50 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden">
+              {/* Calendar */}
+              <button
+                onClick={() => { onExportCalendar?.(); setExportMenu(false); }}
+                className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <CalendarBlank className="w-4 h-4 text-blue-500" />
+                {exportLabel ?? 'Export to Calendar'}
+              </button>
+
+              {/* Docs */}
+              <button
+                onClick={() => { onExportDocs?.(); setExportMenu(false); }}
+                className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <FileText className="w-4 h-4 text-emerald-500" />
+                {docsLabel ?? 'Export to Docs'}
+              </button>
+              {docUrl && (
+                <a
+                  href={docUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setExportMenu(false)}
+                  className="flex items-center gap-3 w-full px-4 py-2 text-xs text-emerald-600 dark:text-emerald-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors pl-11"
+                >
+                  <ArrowSquareOut className="w-3.5 h-3.5" />
+                  Open Doc
+                </a>
+              )}
+
+              {/* Sheets */}
+              <button
+                onClick={() => { onExportSheets?.(); setExportMenu(false); }}
+                className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <Table className="w-4 h-4 text-violet-500" />
+                {sheetsLabel ?? 'Export to Sheets'}
+              </button>
+              {sheetUrl && (
+                <a
+                  href={sheetUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setExportMenu(false)}
+                  className="flex items-center gap-3 w-full px-4 py-2 text-xs text-violet-600 dark:text-violet-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors pl-11"
+                >
+                  <ArrowSquareOut className="w-3.5 h-3.5" />
+                  Open Sheet
+                </a>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Kanban board */}

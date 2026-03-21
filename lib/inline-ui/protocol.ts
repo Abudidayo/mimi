@@ -25,6 +25,9 @@ const dateControlSchema = z.object({
   type: z.literal("date"),
   content: z.string(),
   controlId: idSchema,
+  props: z.object({
+    defaultDate: z.string().nullable(),
+  }).optional(),
 });
 
 const countryControlSchema = z.object({
@@ -109,7 +112,7 @@ export interface InlineDiagnostic {
 const TOKEN_PATTERNS = {
   stepper: /^\{\{\+\[([a-zA-Z0-9_-]+)(?:\|(\d+))?\]-\}\}$/,
   price: /^\{\{\+\[\$([a-zA-Z0-9_-]+)(?:\|(\d+))?\]-\}\}$/,
-  date: /^\{\{::date-picker\[([a-zA-Z0-9_-]+)\]\}\}$/,
+  date: /^\{\{::date-picker\[([a-zA-Z0-9_-]+)(?:\|(\d{4}-\d{2}-\d{2}))?\]\}\}$/,
   country: /^\{\{::country\[([a-zA-Z0-9_-]+)(?:\|([A-Z]{2}))?\]\}\}$/,
   toggle: /^\{\{\[(x| )\]\s*([a-zA-Z0-9_ &'-]+)\}\}$/,
   slider: /^\{\{::slider\[([a-zA-Z0-9_-]+)\|min:(\d+)\|max:(\d+)(?:\|step:(\d+))?\]\}\}$/,
@@ -153,6 +156,7 @@ export function parseInlineToken(raw: string): InlineSegment | null {
       type: "date",
       content: raw,
       controlId: match[1],
+      props: { defaultDate: match[2] ?? null },
     });
   }
 
@@ -285,7 +289,7 @@ export const INLINE_UI_PROMPT_GUIDE = `
 |---|---|
 | Number stepper | \`{{+[id|N]-}}\` — always include initial number (example: \`{{+[travelers|2]-}}\`) |
 | Price stepper | \`{{+[$id|N]-}}\` — always include initial amount (example: \`{{+[$budget|3000]-}}\`) |
-| Date picker | \`{{::date-picker[id]}}\` |
+| Date picker | \`{{::date-picker[id|YYYY-MM-DD]}}\` — include a smart default date when possible |
 | Country picker | \`{{::country[id|ISO2]}}\` — always include ISO-2 code |
 | Toggle chip | \`{{[x] Label}}\` or \`{{[ ] Label}}\` |
 | Slider | \`{{::slider[id|min:0|max:100|step:5]}}\` |

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { callCivic, extractText } from '@/lib/civic/client';
 
 export const runtime = 'nodejs';
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 interface Activity {
   name: string;
@@ -40,11 +40,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No itinerary to export' }, { status: 400 });
     }
 
+    // Compute actual dates from startDate + day offset
+    const resolveDate = (day: DaySchedule): string => {
+      if (day.date && /^\d{4}-\d{2}-\d{2}/.test(day.date)) return day.date;
+      if (startDate) {
+        const d = new Date(startDate);
+        d.setDate(d.getDate() + (day.day - 1));
+        return d.toISOString().split('T')[0];
+      }
+      return day.date || `Day ${day.day}`;
+    };
+
     // Format the itinerary as structured text for the doc
     const itineraryText = schedule
       .map((day) => {
         const theme = day.theme ? ` — ${day.theme}` : '';
-        const header = `Day ${day.day}${theme}`;
+        const date = resolveDate(day);
+        const header = `Day ${day.day} (${date})${theme}`;
 
         const activities = day.activities
           .map((a) => {
@@ -74,23 +86,15 @@ export async function POST(req: Request) {
 
     const prompt = `Create a Google Doc titled "${tripName} — Travel Itinerary".
 
-Structure the document like a professional travel itinerary with:
-
-1. A title header: "${tripName}"
-2. Trip overview section with these details:
+Overview:
 ${tripMeta}
 
-3. Day-by-day itinerary with each day as a section header, activities listed with times, durations, descriptions, locations${currency ? `, and prices in local currency (${currency.to})` : ''}.
-
-Here is the full itinerary content:
-
+Itinerary:
 ${itineraryText}
-
-4. Add a "Notes" section at the end for travelers to fill in.
 
 After creating the doc, provide the Google Docs link.`;
 
-    const response = await callCivic(prompt);
+    const response = await callCivic(prompt, 4096, 'claude-haiku-4-5-20251001');
     const text = extractText(response);
 
     // Try to extract the doc URL from the response
