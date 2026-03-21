@@ -3,10 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/dev-with-bot.mjs",
+    "dev:app": "next dev",
+    "dev:bot": "node scripts/luffa-anthropic-bridge.mjs",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "bot:luffa": "node scripts/luffa-anthropic-bridge.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.63",

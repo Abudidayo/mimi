@@ -48,6 +48,15 @@ Get your API key from: https://console.anthropic.com/
 npm run dev
 ```
 
+This now starts both:
+- Next.js app (`dev:app`)
+- Luffa bridge bot (`dev:bot`)
+
+If you only want the web app:
+```bash
+npm run dev:app
+```
+
 Open [http://localhost:3000](http://localhost:3000)
 
 ## What You'll See
