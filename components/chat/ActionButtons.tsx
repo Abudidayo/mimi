@@ -41,6 +41,12 @@ interface InlineDefaults {
   stayType?: string;
 }
 
+interface SelectedFlightValue {
+  airline?: string;
+  departTime?: string;
+  arrivalTime?: string;
+}
+
 function toValidDate(value: unknown): Date | null {
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
     return value;
@@ -116,6 +122,11 @@ export function ActionButtons({ agentData, controlValues, assistantText, onActio
     typeof stayTypeValue === 'string' && stayTypeValue.trim()
       ? stayTypeValue
       : inlineDefaults.stayType;
+  const selectedFlight =
+    controlValues['selected_flight'] &&
+    typeof controlValues['selected_flight'] === 'object'
+      ? (controlValues['selected_flight'] as SelectedFlightValue)
+      : undefined;
 
   const days = inferTripDays(controlValues);
 
@@ -186,6 +197,34 @@ export function ActionButtons({ agentData, controlValues, assistantText, onActio
 
   // Post-itinerary contextual actions
   if (agentData.itinerary) {
+    const hasContextForBooking =
+      Boolean(agentData.weather) &&
+      Boolean(agentData.safety) &&
+      Boolean(agentData.shopping);
+
+    if (!agentData.booking && hasContextForBooking && destName) {
+      buttons.push({
+        label: 'Love it! Looks good',
+        prompt: stayType
+          ? `Yes, this plan makes sense. Start the browser booking flow for ${destName} with ${stayType} lodging and transport${selectedFlight?.airline ? `, using the ${selectedFlight.airline} option leaving at ${selectedFlight.departTime}` : ''}, and stop at checkout.`
+          : `Yes, this plan makes sense. Start the browser booking flow for ${destName}, choose the best transport and stay options${selectedFlight?.airline ? `, using the ${selectedFlight.airline} option leaving at ${selectedFlight.departTime}` : ''}, and stop at checkout.`,
+        icon: <Receipt weight="fill" className="w-3.5 h-3.5" />,
+        colorIdx: 2,
+      });
+      buttons.push({
+        label: 'Modify plan',
+        prompt: `Modify this ${destName} trip plan before booking.`,
+        icon: <SlidersHorizontal weight="fill" className="w-3.5 h-3.5" />,
+        colorIdx: 5,
+      });
+      buttons.push({
+        label: 'No, rethink it',
+        prompt: `No, this ${destName} trip plan does not make sense yet. Rethink it and suggest a better version.`,
+        icon: <Heart weight="fill" className="w-3.5 h-3.5" />,
+        colorIdx: 0,
+      });
+    }
+
     buttons.push({
       label: 'Change the pace',
       prompt: `Regenerate my ${destName} itinerary with a more packed schedule`,
@@ -220,8 +259,8 @@ export function ActionButtons({ agentData, controlValues, assistantText, onActio
     buttons.push({
       label: 'Book this trip',
       prompt: stayType
-        ? `Book this trip to ${destName} with ${stayType} lodging and the best transport option`
-        : `Book this trip to ${destName} and choose the best transport and stay options`,
+        ? `Book this trip to ${destName} with ${stayType} lodging and the best transport option${selectedFlight?.airline ? `, using the selected ${selectedFlight.airline} flight` : ''}, in the browser, and stop at checkout`
+        : `Book this trip to ${destName} and choose the best transport and stay options${selectedFlight?.airline ? `, using the selected ${selectedFlight.airline} flight` : ''}, in the browser, and stop at checkout`,
       icon: <Receipt weight="fill" className="w-3.5 h-3.5" />,
       colorIdx: 2,
     });

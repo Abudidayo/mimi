@@ -54,6 +54,11 @@ export interface FlightsData {
   bookingTip: string;
 }
 
+export interface SelectedFlightOption extends FlightOption {
+  id: string;
+  route?: string;
+}
+
 const classColors = {
   economy:  { bg: 'bg-blue-400/15',   text: 'text-blue-100',   border: 'border-blue-300/20' },
   premium:  { bg: 'bg-purple-400/15', text: 'text-purple-100', border: 'border-purple-300/20' },
@@ -78,7 +83,13 @@ const modeIcon = (mode: FlightsData["recommendedMode"] | AlternativeTransportOpt
   }
 };
 
-export function FlightsCard({ data }: { data: FlightsData }) {
+interface FlightsCardProps {
+  data: FlightsData;
+  selectedFlightId?: string;
+  onSelectFlight?: (flight: SelectedFlightOption) => void;
+}
+
+export function FlightsCard({ data, selectedFlightId, onSelectFlight }: FlightsCardProps) {
   const cheapestFlight = data.flights.length > 0
     ? data.flights.reduce((min, option) => option.price < min.price ? option : min, data.flights[0])
     : null;
@@ -118,6 +129,8 @@ export function FlightsCard({ data }: { data: FlightsData }) {
             {data.flights.map((option, index) => {
               const colors = classColors[option.class];
               const isCheapest = option === cheapestFlight;
+              const optionId = `${option.airline}-${option.departTime}-${option.arrivalTime}-${option.price}-${index}`;
+              const isSelected = selectedFlightId === optionId;
 
               return (
                 <motion.div
@@ -125,8 +138,24 @@ export function FlightsCard({ data }: { data: FlightsData }) {
                   initial={{ opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className={cn("rounded-2xl px-3 py-3 border", isCheapest && "bg-sky-400/8")}
-                  style={{ borderColor: "rgba(255,255,255,0.08)" }}
+                  className={cn(
+                    "rounded-2xl px-3 py-3 border",
+                    isCheapest && "bg-sky-400/8",
+                    onSelectFlight && "cursor-pointer"
+                  )}
+                  style={{
+                    borderColor: isSelected ? "rgba(125,211,252,0.55)" : "rgba(255,255,255,0.08)",
+                    background: isSelected
+                      ? "linear-gradient(180deg, rgba(56,189,248,0.16), rgba(14,29,73,0.96))"
+                      : undefined,
+                  }}
+                  onClick={() =>
+                    onSelectFlight?.({
+                      id: optionId,
+                      route: data.route,
+                      ...option,
+                    })
+                  }
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
@@ -140,6 +169,11 @@ export function FlightsCard({ data }: { data: FlightsData }) {
                         <span className={cn("text-xs px-1.5 py-0.5 rounded-full border capitalize", colors.bg, colors.text, colors.border)}>
                           {option.class}
                         </span>
+                        {isSelected && (
+                          <span className="flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full bg-emerald-400/15 text-emerald-100 border border-emerald-300/20">
+                            Selected
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 text-xs text-white/52 flex-wrap">
                         <span>{option.departTime}</span>
@@ -163,6 +197,11 @@ export function FlightsCard({ data }: { data: FlightsData }) {
                     <div className="text-right shrink-0">
                       <p className="text-base font-bold text-white">${option.price.toLocaleString()}</p>
                       <p className="text-xs text-white/35">per person</p>
+                      {onSelectFlight && (
+                        <p className="text-[11px] text-sky-100/80 mt-1">
+                          {isSelected ? "Applied in draft" : "Choose flight"}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </motion.div>

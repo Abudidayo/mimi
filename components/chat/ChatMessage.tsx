@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { InlineUIRenderer } from "@/lib/inline-ui/renderer";
 import { AgentPanel, type AgentData, type AgentType } from "@/components/AgentPanel";
 import { ActionButtons } from "@/components/chat/ActionButtons";
+import { BrowserTimeline } from "@/components/chat/BrowserTimeline";
 
 // Maps each tool name from the API route to its AgentType
 const TOOL_TO_AGENT: Record<string, AgentType> = {
@@ -31,14 +32,41 @@ function getAgentTypeForToolName(toolName: string | undefined): AgentType | unde
 function extractAgentData(parts: unknown[] | undefined): { agentData: AgentData; loadingAgents: Set<AgentType> } {
   const agentData: AgentData = {};
   const loadingAgents = new Set<AgentType>();
+  const toolCallNames = new Map<string, string>();
 
   if (!parts) return { agentData, loadingAgents };
 
   for (const part of parts) {
     const p = part as Record<string, unknown>;
 
+    if (typeof p.toolCallId === 'string' && typeof p.toolName === 'string') {
+      toolCallNames.set(p.toolCallId, p.toolName);
+    }
+
+    if (p.type === 'tool-invocation') {
+      const invocation = p.toolInvocation as
+        | { toolCallId?: string; toolName?: string }
+        | undefined;
+      if (typeof invocation?.toolCallId === 'string' && typeof invocation.toolName === 'string') {
+        toolCallNames.set(invocation.toolCallId, invocation.toolName);
+      }
+    }
+
+    if (p.type === 'dynamic-tool' && typeof p.toolCallId === 'string' && typeof p.toolName === 'string') {
+      toolCallNames.set(p.toolCallId, p.toolName);
+    }
+  }
+
+  for (const part of parts) {
+    const p = part as Record<string, unknown>;
+
     if (p.type === 'tool-input-available' || p.type === 'tool-output-available') {
-      const toolName = typeof p.toolName === 'string' ? p.toolName : undefined;
+      const toolName =
+        typeof p.toolName === 'string'
+          ? p.toolName
+          : typeof p.toolCallId === 'string'
+            ? toolCallNames.get(p.toolCallId)
+            : undefined;
       const agentKey = getAgentTypeForToolName(toolName);
       if (!agentKey) continue;
 
@@ -46,6 +74,21 @@ function extractAgentData(parts: unknown[] | undefined): { agentData: AgentData;
         (agentData as Record<string, unknown>)[agentKey] = p.output;
         loadingAgents.delete(agentKey);
       } else {
+        loadingAgents.add(agentKey);
+      }
+      continue;
+    }
+
+    if (p.type === 'dynamic-tool') {
+      const toolName = typeof p.toolName === 'string' ? p.toolName : undefined;
+      const agentKey = getAgentTypeForToolName(toolName);
+      if (!agentKey) continue;
+
+      const state = typeof p.state === 'string' ? p.state : undefined;
+      if (state === 'output-available' && p.output !== undefined) {
+        (agentData as Record<string, unknown>)[agentKey] = p.output;
+        loadingAgents.delete(agentKey);
+      } else if (state === 'input-available' || state === 'input-streaming') {
         loadingAgents.add(agentKey);
       }
       continue;
@@ -71,9 +114,14 @@ function extractAgentData(parts: unknown[] | undefined): { agentData: AgentData;
 
     if (p.type === 'tool-invocation') {
       const invocation = p.toolInvocation as
-        | { toolName?: string; state?: string; result?: unknown }
+        | { toolCallId?: string; toolName?: string; state?: string; result?: unknown }
         | undefined;
-      const agentKey = getAgentTypeForToolName(invocation?.toolName);
+      const toolName =
+        invocation?.toolName ??
+        (typeof invocation?.toolCallId === 'string'
+          ? toolCallNames.get(invocation.toolCallId)
+          : undefined);
+      const agentKey = getAgentTypeForToolName(toolName);
       if (!agentKey || !invocation?.state) continue;
 
       if (invocation.state === 'result' && invocation.result !== undefined) {
@@ -145,6 +193,10 @@ export function ChatMessage({
   const showAgentPanel =
     message.role === 'assistant' &&
     (Object.keys(agentData).length > 0 || loadingAgents.size > 0);
+  const isBookingInProgress =
+    message.role === 'assistant' &&
+    loadingAgents.has('booking') &&
+    !agentData.booking;
 
   const textParts = (parts?.filter(
     (p) => (p as { type?: string }).type === 'text'
@@ -208,7 +260,18 @@ export function ChatMessage({
             <p className="whitespace-pre-wrap m-0">{text}</p>
           ) : null}
         </div>
-        {showAgentPanel && <AgentPanel data={agentData} loading={loadingAgents} onAction={onAction} />}
+        {isBookingInProgress && (
+          <BrowserTimeline active />
+        )}
+        {showAgentPanel && (
+          <AgentPanel
+            data={agentData}
+            loading={loadingAgents}
+            onAction={onAction}
+            controlValues={controlValues}
+            onControlChange={onControlChange}
+          />
+        )}
         {showActionButtons && (
           <ActionButtons
             agentData={agentData}

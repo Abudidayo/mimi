@@ -107,6 +107,50 @@ function formatBudgetRangeValue(value: unknown): string {
   return `$${budgetRange.min ?? '?'}-$${budgetRange.max ?? '?'}`;
 }
 
+function formatSelectedFlightValue(value: unknown): string {
+  if (!value || typeof value !== 'object') {
+    return String(value);
+  }
+
+  const flight = value as {
+    airline?: unknown;
+    departTime?: unknown;
+    arrivalTime?: unknown;
+    price?: unknown;
+    route?: unknown;
+  };
+
+  const airline = typeof flight.airline === 'string' ? flight.airline : 'selected flight';
+  const route = typeof flight.route === 'string' ? ` on ${flight.route}` : '';
+  const departTime = typeof flight.departTime === 'string' ? ` departing ${flight.departTime}` : '';
+  const arrivalTime = typeof flight.arrivalTime === 'string' ? ` arriving ${flight.arrivalTime}` : '';
+  const price = typeof flight.price === 'number' ? ` for $${flight.price}` : '';
+
+  return `${airline}${route}${departTime}${arrivalTime}${price}`;
+}
+
+function formatSelectedLodgingValue(value: unknown): string {
+  if (!value || typeof value !== 'object') {
+    return String(value);
+  }
+
+  const lodging = value as {
+    name?: unknown;
+    provider?: unknown;
+    neighborhood?: unknown;
+    totalPrice?: unknown;
+  };
+
+  const name = typeof lodging.name === 'string' ? lodging.name : 'selected stay';
+  const provider = typeof lodging.provider === 'string' ? ` via ${lodging.provider}` : '';
+  const neighborhood =
+    typeof lodging.neighborhood === 'string' ? ` in ${lodging.neighborhood}` : '';
+  const totalPrice =
+    typeof lodging.totalPrice === 'number' ? ` for $${lodging.totalPrice} total` : '';
+
+  return `${name}${provider}${neighborhood}${totalPrice}`;
+}
+
 export function formatReplanPrompt(changes: Map<string, unknown>): string {
   const changeDescriptions: string[] = [];
 
@@ -140,6 +184,12 @@ export function formatReplanPrompt(changes: Map<string, unknown>): string {
         break;
       case 'stay_type':
         changeDescriptions.push(`stay type as ${value}`);
+        break;
+      case 'selected_flight':
+        changeDescriptions.push(`preferred flight as ${formatSelectedFlightValue(value)}`);
+        break;
+      case 'selected_lodging':
+        changeDescriptions.push(`preferred stay as ${formatSelectedLodgingValue(value)}`);
         break;
       case 'pace':
         changeDescriptions.push(`${value} pace`);

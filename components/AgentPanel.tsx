@@ -76,9 +76,17 @@ interface AgentPanelProps {
   data: AgentData;
   loading: Set<AgentType>;
   onAction?: (prompt: string) => void;
+  controlValues?: Record<string, unknown>;
+  onControlChange?: (id: string, value: unknown) => void;
 }
 
-export function AgentPanel({ data, loading, onAction }: AgentPanelProps) {
+export function AgentPanel({
+  data,
+  loading,
+  onAction,
+  controlValues,
+  onControlChange,
+}: AgentPanelProps) {
   const [expanded, setExpanded] = useState<AgentType | null>(null);
   const [exporting, setExporting] = useState(false);
   const [calendarEventIds, setCalendarEventIds] = useState<Record<string, string>>({});
@@ -282,8 +290,40 @@ export function AgentPanel({ data, loading, onAction }: AgentPanelProps) {
               {expanded === 'visa'     && data.visa     && <VisaCard     data={data.visa}     />}
               {expanded === 'events'   && data.events   && <EventsCard   data={data.events}   />}
               {expanded === 'shopping' && data.shopping && <ShoppingCard data={data.shopping} />}
-              {expanded === 'flights'  && data.flights  && <FlightsCard  data={data.flights}  />}
-              {expanded === 'lodging'  && data.lodging  && <LodgingCard  data={data.lodging}  />}
+              {expanded === 'flights'  && data.flights  && (
+                <FlightsCard
+                  data={data.flights}
+                  selectedFlightId={
+                    controlValues?.selected_flight &&
+                    typeof controlValues.selected_flight === 'object' &&
+                    typeof (controlValues.selected_flight as { id?: unknown }).id === 'string'
+                      ? (controlValues.selected_flight as { id: string }).id
+                      : undefined
+                  }
+                  onSelectFlight={
+                    onControlChange
+                      ? (flight) => onControlChange('selected_flight', flight)
+                      : undefined
+                  }
+                />
+              )}
+              {expanded === 'lodging'  && data.lodging  && (
+                <LodgingCard
+                  data={data.lodging}
+                  selectedLodgingId={
+                    controlValues?.selected_lodging &&
+                    typeof controlValues.selected_lodging === 'object' &&
+                    typeof (controlValues.selected_lodging as { id?: unknown }).id === 'string'
+                      ? (controlValues.selected_lodging as { id: string }).id
+                      : undefined
+                  }
+                  onSelectLodging={
+                    onControlChange
+                      ? (lodging) => onControlChange('selected_lodging', lodging)
+                      : undefined
+                  }
+                />
+              )}
               {expanded === 'booking'  && data.booking  && <BookingCard  data={data.booking}  />}
             </div>
           </motion.div>

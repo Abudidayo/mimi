@@ -57,7 +57,6 @@ export async function POST(req: Request) {
           writer.write({
             type: 'tool-output-available',
             toolCallId: toolCall.toolCallId,
-            toolName: toolCall.toolName,
             output: toolCall.result ?? null,
           } as never);
         }
