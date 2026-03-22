@@ -14,6 +14,7 @@ import { bookingAgent } from '@/mastra/agents/booking';
 import { plannerAgent } from '@/mastra/agents/planner';
 import { suggestionsAgent } from '@/mastra/agents/suggestions';
 import { calendarAgent } from '@/mastra/agents/calendar';
+import { TopicGuardProcessor } from '@/lib/guardrails/topic-guard';
 
 const SYSTEM_PROMPT = `You are mimi, a smart travel planning AI. You must delegate to specialist agents instead of doing specialist work yourself.
 
@@ -135,6 +136,7 @@ export const supervisorAgent = new Agent({
   instructions: SYSTEM_PROMPT,
   model: coordinatorModel,
   description: 'Coordinates specialist travel agents and synthesizes their outputs into a single conversational response.',
+  inputProcessors: [new TopicGuardProcessor()],
   agents: {
     safetyAgent,
     weatherAgent,

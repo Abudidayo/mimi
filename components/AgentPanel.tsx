@@ -130,6 +130,8 @@ export function AgentPanel({
   const [docUrl, setDocUrl] = useState<string | null>(null);
   const [exportingSheets, setExportingSheets] = useState(false);
   const [sheetUrl, setSheetUrl] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
 
   const handleExportDocs = useCallback(async () => {
     if (!data.itinerary || exportingDocs) return;
@@ -208,6 +210,74 @@ export function AgentPanel({
       setExportingSheets(false);
     }
   }, [data.itinerary, data.currency, exportingSheets]);
+
+  const handleShareTrip = useCallback(async () => {
+    if (!data.itinerary || sharing) return;
+    setSharing(true);
+    try {
+      const res = await fetch('/api/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          schedule: data.itinerary,
+          tripName: 'My Trip',
+          destination: '',
+          startDate: (/^\d{4}-\d{2}-\d{2}/.test(data.itinerary[0]?.date ?? '')) ? data.itinerary[0].date : new Date().toISOString().split('T')[0],
+        }),
+      });
+      const result = await res.json();
+      if (result.success && result.shareUrl) {
+        setShareUrl(result.shareUrl);
+        await navigator.clipboard.writeText(result.shareUrl).catch(() => {});
+        alert(`✅ Share link copied!\n${result.shareUrl}`);
+      } else {
+        alert('❌ Failed to create share link');
+      }
+    } catch (err) {
+      alert('❌ Could not create share link');
+      console.error(err);
+    } finally {
+      setSharing(false);
+    }
+  }, [data.itinerary, sharing]);
+
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+
+  const handleDownloadPdf = useCallback(async () => {
+    if (!data.itinerary || generatingPdf) return;
+    setGeneratingPdf(true);
+    try {
+      // Reuse existing share link or create one
+      let url = shareUrl;
+      if (!url) {
+        const res = await fetch('/api/share', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            schedule: data.itinerary,
+            tripName: 'My Trip',
+            destination: '',
+            startDate: (/^\d{4}-\d{2}-\d{2}/.test(data.itinerary[0]?.date ?? '')) ? data.itinerary[0].date : new Date().toISOString().split('T')[0],
+          }),
+        });
+        const result = await res.json();
+        if (result.success && result.shareUrl) {
+          url = result.shareUrl;
+          setShareUrl(url);
+        }
+      }
+      if (url) {
+        window.open(`${url}?print=true`, '_blank');
+      } else {
+        alert('❌ Failed to generate PDF');
+      }
+    } catch (err) {
+      alert('❌ Could not generate PDF');
+      console.error(err);
+    } finally {
+      setGeneratingPdf(false);
+    }
+  }, [data.itinerary, generatingPdf, shareUrl]);
 
   const visibleAgents = AGENTS.filter(a => loading.has(a.id) || data[a.id] !== undefined);
   if (visibleAgents.length === 0) return null;
@@ -351,6 +421,11 @@ export function AgentPanel({
               sheetsLabel={exportingSheets ? 'Exporting...' : sheetUrl ? 'Re-export to Sheets' : 'Export to Sheets'}
               docUrl={docUrl}
               sheetUrl={sheetUrl}
+              onShareTrip={handleShareTrip}
+              sharingLabel={sharing ? 'Creating link...' : shareUrl ? 'Copy Link Again' : 'Share Trip Link'}
+              shareUrl={shareUrl}
+              onDownloadPdf={handleDownloadPdf}
+              pdfLabel={generatingPdf ? 'Generating...' : 'Download as PDF'}
             />
           </motion.div>
         )}

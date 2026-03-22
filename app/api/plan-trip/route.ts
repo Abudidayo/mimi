@@ -2,12 +2,38 @@ import '@/lib/zod-compat';
 import { handleChatStream } from '@mastra/ai-sdk';
 import { createUIMessageStream, createUIMessageStreamResponse } from 'ai';
 import { mastra } from '@/mastra';
+import { checkTopicGuard } from '@/lib/guardrails/topic-guard';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
 
 export async function POST(req: Request) {
   const params = await req.json();
+
+  // Topic guardrail — block off-topic requests before they reach the agent
+  // Also enforced by TopicGuardProcessor on the supervisor (Mastra inputProcessors) as defense-in-depth
+  const messages = params?.messages;
+  if (Array.isArray(messages) && messages.length > 0) {
+    const lastMsg = messages[messages.length - 1];
+    const userText =
+      typeof lastMsg?.content === 'string'
+        ? lastMsg.content
+        : Array.isArray(lastMsg?.content)
+          ? lastMsg.content.filter((p: { type?: string }) => p.type === 'text').map((p: { text?: string }) => p.text ?? '').join(' ')
+          : '';
+
+    if (userText) {
+      const guard = await checkTopicGuard(userText);
+      if (!guard.allowed) {
+        const redirectStream = createUIMessageStream({
+          execute: async ({ writer }) => {
+            writer.write({ type: 'text', text: guard.redirectMessage ?? "I'm Mimi, your travel assistant! How can I help you plan a trip?" } as never);
+          },
+        });
+        return createUIMessageStreamResponse({ stream: redirectStream });
+      }
+    }
+  }
 
   const stream = await handleChatStream({
     mastra,

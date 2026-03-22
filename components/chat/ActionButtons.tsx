@@ -115,6 +115,7 @@ export function ActionButtons({ agentData, controlValues, assistantText, onActio
   const destination: Country | undefined = controlValues['destination'] ?? inlineDefaults.destination;
   const destName = destination?.name ?? '';
   const travelersValue = controlValues['travelers'];
+  const travelersExplicit = typeof travelersValue === 'number' || inlineDefaults.travelers != null;
   const travelers =
     typeof travelersValue === 'number'
       ? travelersValue
@@ -140,7 +141,9 @@ export function ActionButtons({ agentData, controlValues, assistantText, onActio
     if (!agentData.itinerary) {
       buttons.push({
         label: 'Love it! Plan this trip',
-        prompt: `Plan my ${days}-day trip to ${destName} for ${travelers} ${travelers === 1 ? 'person' : 'people'}`,
+        prompt: travelersExplicit
+          ? `Plan my ${days}-day trip to ${destName} for ${travelers} ${travelers === 1 ? 'person' : 'people'}`
+          : `Plan my ${days}-day trip to ${destName}`,
         icon: <Heart weight="fill" className="w-3.5 h-3.5" />,
         colorIdx: 0,
       });

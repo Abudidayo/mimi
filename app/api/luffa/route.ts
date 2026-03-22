@@ -1,6 +1,7 @@
 import '@/lib/zod-compat';
 import { mastra } from '@/mastra';
 import { NextResponse } from 'next/server';
+import { checkTopicGuard } from '@/lib/guardrails/topic-guard';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -71,6 +72,12 @@ export async function POST(req: Request) {
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json({ error: 'message is required' }, { status: 400 });
+    }
+
+    // Topic guardrail — block off-topic requests
+    const guard = await checkTopicGuard(message);
+    if (!guard.allowed) {
+      return NextResponse.json({ reply: guard.redirectMessage, isNewConversation: false });
     }
 
     // Get or create conversation history

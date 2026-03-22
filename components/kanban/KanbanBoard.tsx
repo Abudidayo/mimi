@@ -14,7 +14,7 @@ import {
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, CalendarBlank, Download, FileText, Table, ArrowSquareOut, CaretDown } from '@phosphor-icons/react';
+import { X, CalendarBlank, Download, FileText, Table, ArrowSquareOut, CaretDown, LinkSimple, FilePdf } from '@phosphor-icons/react';
 import { KanbanColumn } from './KanbanColumn';
 import { KanbanCard } from './KanbanCard';
 
@@ -48,14 +48,19 @@ interface KanbanBoardProps {
   onExportCalendar?: () => void;
   onExportDocs?: () => void;
   onExportSheets?: () => void;
+  onShareTrip?: () => void;
+  onDownloadPdf?: () => void;
   exportLabel?: string;
   docsLabel?: string;
   sheetsLabel?: string;
   docUrl?: string | null;
   sheetUrl?: string | null;
+  shareUrl?: string | null;
+  sharingLabel?: string;
+  pdfLabel?: string;
 }
 
-export function KanbanBoard({ schedule: initialSchedule, onScheduleChange, onExportCalendar, onExportDocs, onExportSheets, exportLabel, docsLabel, sheetsLabel, docUrl, sheetUrl }: KanbanBoardProps) {
+export function KanbanBoard({ schedule: initialSchedule, onScheduleChange, onExportCalendar, onExportDocs, onExportSheets, onShareTrip, onDownloadPdf, exportLabel, docsLabel, sheetsLabel, docUrl, sheetUrl, shareUrl, sharingLabel, pdfLabel }: KanbanBoardProps) {
   const [schedule, setSchedule] = useState<DaySchedule[]>(initialSchedule);
   const [activeActivity, setActiveActivity] = useState<Activity | null>(null);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
@@ -264,6 +269,39 @@ export function KanbanBoard({ schedule: initialSchedule, onScheduleChange, onExp
                   Open Sheet
                 </a>
               )}
+
+              {/* Divider */}
+              <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+
+              {/* Share */}
+              <button
+                onClick={() => { onShareTrip?.(); setExportMenu(false); }}
+                className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <LinkSimple className="w-4 h-4 text-orange-500" />
+                {sharingLabel ?? 'Share Trip Link'}
+              </button>
+              {shareUrl && (
+                <a
+                  href={shareUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setExportMenu(false)}
+                  className="flex items-center gap-3 w-full px-4 py-2 text-xs text-orange-600 dark:text-orange-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors pl-11"
+                >
+                  <ArrowSquareOut className="w-3.5 h-3.5" />
+                  Open Shared Page
+                </a>
+              )}
+
+              {/* PDF */}
+              <button
+                onClick={() => { onDownloadPdf?.(); setExportMenu(false); }}
+                className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <FilePdf className="w-4 h-4 text-red-500" />
+                {pdfLabel ?? 'Download as PDF'}
+              </button>
             </div>
           )}
         </div>
