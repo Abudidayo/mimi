@@ -48,9 +48,9 @@ export function MapboxTripMap({ artifact }: MapboxTripMapProps) {
         });
         map.setTerrain({ source: "mapbox-dem", exaggeration: 1.45 });
         map.setFog({
-          color: "#0f1d4e",
-          "high-color": "#13275e",
-          "space-color": "#091231",
+          color: "#141414",
+          "high-color": "#1f1f1f",
+          "space-color": "#0a0a0a",
           "horizon-blend": 0.08,
         });
 
@@ -71,9 +71,9 @@ export function MapboxTripMap({ artifact }: MapboxTripMapProps) {
           type: "line",
           source: "trip-route",
           paint: {
-            "line-color": "#d9c5ff",
+            "line-color": "#a3a3a3",
             "line-width": 14,
-            "line-opacity": 0.34,
+            "line-opacity": 0.28,
             "line-blur": 1.1,
           },
         });
@@ -83,7 +83,7 @@ export function MapboxTripMap({ artifact }: MapboxTripMapProps) {
           type: "line",
           source: "trip-route",
           paint: {
-            "line-color": "#9f88d5",
+            "line-color": "#d4d4d4",
             "line-width": 5,
           },
         });
@@ -101,7 +101,7 @@ export function MapboxTripMap({ artifact }: MapboxTripMapProps) {
             type: "fill-extrusion",
             minzoom: 11,
             paint: {
-              "fill-extrusion-color": "#20367a",
+              "fill-extrusion-color": "#3a3a3a",
               "fill-extrusion-height": [
                 "interpolate",
                 ["linear"],
@@ -173,30 +173,30 @@ export function MapboxTripMap({ artifact }: MapboxTripMapProps) {
   const showFallback = !hasToken || artifact.routeCoordinates.length < 2;
 
   return (
-    <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[#0d1f54]">
-      <div className="flex items-center justify-between border-b border-white/8 bg-[linear-gradient(180deg,rgba(94,234,212,0.14),rgba(94,234,212,0.03))] px-5 pb-3 pt-4">
+    <div className="overflow-hidden rounded-[20px] border border-white/10 bg-[#161616]">
+      <div className="flex items-center justify-between border-b border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] px-5 pb-3 pt-4">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-200/90">Route map</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/50">Route map</p>
           <p className="mt-1 text-sm text-white/65">{artifact.originLabel ?? "Origin"} to {artifact.destination}</p>
         </div>
         <div className="flex items-center gap-3 text-xs text-white/55">
           <span className="inline-flex items-center gap-1.5">
-            <AirplaneTilt weight="fill" className="h-4 w-4 text-[#8d77c4]" />
+            <AirplaneTilt weight="fill" className="h-4 w-4 text-white/55" />
             Airport
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <HouseLine weight="fill" className="h-4 w-4 text-[#8d77c4]" />
+            <HouseLine weight="fill" className="h-4 w-4 text-white/55" />
             Stay
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <MapPin weight="fill" className="h-4 w-4 text-[#8d77c4]" />
+            <MapPin weight="fill" className="h-4 w-4 text-white/55" />
             Route
           </span>
         </div>
       </div>
 
       {showFallback ? (
-        <div className="flex h-[320px] items-center justify-center bg-[radial-gradient(circle_at_top,rgba(155,135,245,0.2),transparent_45%),linear-gradient(180deg,#0c1a45,#091231)] px-6 text-center text-sm text-white/65">
+        <div className="flex h-[320px] items-center justify-center bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),transparent_50%),linear-gradient(180deg,#1a1a1a,#111)] px-6 text-center text-sm text-white/65">
           Add `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` and confirm transport + stay selections to unlock the 3D trip map.
         </div>
       ) : (

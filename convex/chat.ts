@@ -41,11 +41,11 @@ export const getSession = queryGeneric({
   },
   returns: v.union(v.object(sessionShape), v.null()),
   handler: async (ctx, args) => {
-    const sessions = await ctx.db
+    const session = await ctx.db
       .query("chatSessions")
-      .withIndex("by_ownerKey_updatedAt", (q) => q.eq("ownerKey", args.ownerKey))
-      .collect();
-    const session = sessions.find((item) => item.sessionId === args.sessionId);
+      .withIndex("by_ownerKey_sessionId", (q) => q.eq("ownerKey", args.ownerKey))
+      .filter((q) => q.eq(q.field("sessionId"), args.sessionId))
+      .first();
 
     if (!session) {
       return null;
@@ -71,11 +71,11 @@ export const createSession = mutationGeneric({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const existingSessions = await ctx.db
+    const existing = await ctx.db
       .query("chatSessions")
-      .withIndex("by_ownerKey_updatedAt", (q) => q.eq("ownerKey", args.ownerKey))
-      .collect();
-    const existing = existingSessions.find((item) => item.sessionId === args.sessionId);
+      .withIndex("by_ownerKey_sessionId", (q) => q.eq("ownerKey", args.ownerKey))
+      .filter((q) => q.eq(q.field("sessionId"), args.sessionId))
+      .first();
 
     if (existing) {
       return null;
@@ -109,17 +109,17 @@ export const saveSession = mutationGeneric({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const existingSessions = await ctx.db
+    const existing = await ctx.db
       .query("chatSessions")
-      .withIndex("by_ownerKey_updatedAt", (q) => q.eq("ownerKey", args.ownerKey))
-      .collect();
-    const existing = existingSessions.find((item) => item.sessionId === args.sessionId);
+      .withIndex("by_ownerKey_sessionId", (q) => q.eq("ownerKey", args.ownerKey))
+      .filter((q) => q.eq(q.field("sessionId"), args.sessionId))
+      .first();
 
     const now = Date.now();
 
     if (existing) {
       await ctx.db.patch(existing._id, {
-        userId: args.userId,
+        ...(args.userId !== undefined ? { userId: args.userId } : {}),
         title: args.title ?? existing.title,
         messages: args.messages,
         controlValues: args.controlValues,
@@ -150,11 +150,11 @@ export const renameSession = mutationGeneric({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const sessions = await ctx.db
+    const session = await ctx.db
       .query("chatSessions")
-      .withIndex("by_ownerKey_updatedAt", (q) => q.eq("ownerKey", args.ownerKey))
-      .collect();
-    const session = sessions.find((item) => item.sessionId === args.sessionId);
+      .withIndex("by_ownerKey_sessionId", (q) => q.eq("ownerKey", args.ownerKey))
+      .filter((q) => q.eq(q.field("sessionId"), args.sessionId))
+      .first();
 
     if (!session) {
       return null;
@@ -175,11 +175,11 @@ export const deleteSession = mutationGeneric({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const sessions = await ctx.db
+    const session = await ctx.db
       .query("chatSessions")
-      .withIndex("by_ownerKey_updatedAt", (q) => q.eq("ownerKey", args.ownerKey))
-      .collect();
-    const session = sessions.find((item) => item.sessionId === args.sessionId);
+      .withIndex("by_ownerKey_sessionId", (q) => q.eq("ownerKey", args.ownerKey))
+      .filter((q) => q.eq(q.field("sessionId"), args.sessionId))
+      .first();
 
     if (!session) {
       return null;

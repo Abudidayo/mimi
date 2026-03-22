@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -17,7 +18,44 @@ import {
 import { BrowserTimeline } from "@/components/chat/BrowserTimeline";
 import { MapboxTripMap } from "@/components/trip-planner/MapboxTripMap";
 import type { TripArtifact, TripTimelineItem } from "@/lib/trip-artifact";
+import { CONTROL_COLORS } from "@/lib/inline-ui/colors";
 import { cn } from "@/lib/utils";
+
+/** Same Pexels-backed proxy as destination suggestion cards (`/api/image?q=...`). */
+function PlannerPexelsImage({
+  imageQuery,
+  alt,
+  className,
+  colorIndex = 0,
+}: {
+  imageQuery: string;
+  alt: string;
+  className: string;
+  colorIndex?: number;
+}) {
+  const [imgError, setImgError] = useState(false);
+  const src = `/api/image?q=${encodeURIComponent(imageQuery)}`;
+  const color = CONTROL_COLORS[Math.abs(colorIndex) % CONTROL_COLORS.length];
+
+  useEffect(() => {
+    setImgError(false);
+  }, [imageQuery]);
+
+  if (imgError) {
+    return (
+      <div
+        className={className}
+        style={{ background: color.gradient }}
+        aria-hidden
+      />
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt={alt} className={className} onError={() => setImgError(true)} />
+  );
+}
 
 interface TripPlannerDrawerProps {
   open: boolean;
@@ -40,7 +78,7 @@ const timelineMeta: Record<
   transfer: {
     icon: <CarProfile weight="fill" className="h-4 w-4" />,
     label: "Transfer",
-    accent: "bg-[#5ec8ff]/18 text-[#cfeeff] border-[#7fd6ff]/20",
+    accent: "bg-white/10 text-white/82 border-white/14",
   },
   stay: {
     icon: <HouseLine weight="fill" className="h-4 w-4" />,
@@ -61,7 +99,7 @@ const timelineMeta: Record<
 
 function panelClassName(extra?: string) {
   return cn(
-    "rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(24,47,108,0.96),rgba(14,31,79,0.96))] shadow-[0_18px_50px_rgba(4,10,34,0.24)]",
+    "rounded-[20px] border border-white/10 bg-[linear-gradient(180deg,rgba(38,38,38,0.95),rgba(22,22,22,0.96))] shadow-[0_18px_50px_rgba(0,0,0,0.35)]",
     extra
   );
 }
@@ -82,12 +120,19 @@ export function TripPlannerDrawer({
   onPrimaryAction,
   primaryLabel = "Love it! Looks good",
 }: TripPlannerDrawerProps) {
+  const handlePrimaryClick = () => {
+    onOpenChange(false);
+    onPrimaryAction?.();
+  };
   if (!artifact) return null;
 
   const selectedFlight = artifact.selectedFlight;
   const transportSteps = artifact.flights?.localOptions ?? [];
   const itineraryPreview = artifact.itinerary?.slice(0, 6) ?? [];
   const timelineItems = artifact.timeline;
+  const highlightEvent = artifact.events?.events?.[0];
+  const eventsImageDestination =
+    artifact.events?.destination ?? artifact.destination;
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -99,7 +144,7 @@ export function TripPlannerDrawer({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-40 bg-[#050b1f]/72 backdrop-blur-md"
+                className="fixed inset-0 z-40 bg-black/70 backdrop-blur-md"
               />
             </Dialog.Overlay>
 
@@ -109,7 +154,7 @@ export function TripPlannerDrawer({
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: "100%", opacity: 0.98 }}
                 transition={{ type: "spring", stiffness: 220, damping: 28 }}
-                className="fixed inset-y-3 right-3 z-50 w-[min(1180px,calc(100vw-24px))] overflow-hidden rounded-[34px] border border-[#d0dbff]/16 bg-[linear-gradient(180deg,#172f74_0%,#12285f_36%,#0c1d49_100%)] shadow-[0_30px_120px_rgba(2,6,23,0.45)]"
+                className="fixed inset-y-3 right-3 z-50 w-[min(1180px,calc(100vw-24px))] overflow-hidden rounded-[26px] border border-white/12 bg-[linear-gradient(180deg,#1a1a1a_0%,#141414_40%,#111111_100%)] shadow-[0_30px_120px_rgba(0,0,0,0.55)]"
               >
                 <div className="flex h-full flex-col">
                   <div className="flex items-start justify-between border-b border-white/8 px-8 py-7">
@@ -207,7 +252,7 @@ export function TripPlannerDrawer({
                           <div className="flex items-center justify-between gap-4">
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center justify-between gap-3">
-                                <p className="text-sm font-semibold text-sky-200">{selectedFlight.airline}</p>
+                                <p className="text-sm font-semibold text-white/78">{selectedFlight.airline}</p>
                                 {darkPill(selectedFlight.stops === 0 ? "Direct" : `${selectedFlight.stops} stop${selectedFlight.stops > 1 ? "s" : ""}`)}
                               </div>
 
@@ -222,7 +267,7 @@ export function TripPlannerDrawer({
                                 <div className="min-w-[220px] flex-1 px-2 pb-3">
                                   <p className="text-center text-base text-white/70">{selectedFlight.duration}</p>
                                   <div className="relative mt-2">
-                                    <div className="h-2 rounded-full bg-[#b692ff]/35" />
+                                    <div className="h-2 rounded-full bg-white/18" />
                                     <div className="absolute inset-x-0 -top-3 flex justify-center text-white">
                                       <AirplaneTilt weight="fill" className="h-7 w-7 rotate-90" />
                                     </div>
@@ -252,7 +297,7 @@ export function TripPlannerDrawer({
                       {transportSteps.length > 0 && (
                         <div className={panelClassName("p-6")}>
                           <div className="flex items-center gap-2">
-                            <CarProfile weight="fill" className="h-4 w-4 text-cyan-200" />
+                            <CarProfile weight="fill" className="h-4 w-4 text-white/70" />
                             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/40">
                               How to get to your location
                             </p>
@@ -262,7 +307,7 @@ export function TripPlannerDrawer({
                             {transportSteps.map((option, index) => (
                               <div
                                 key={`${option.mode}-${index}`}
-                                className="rounded-[22px] border border-white/10 bg-white/5 px-5 py-4"
+                                className="rounded-[16px] border border-white/10 bg-white/5 px-5 py-4"
                               >
                                 <div className="flex items-start justify-between gap-5">
                                   <div className="min-w-0">
@@ -280,7 +325,7 @@ export function TripPlannerDrawer({
                       {artifact.selectedLodging && (
                         <div className={panelClassName("p-6")}>
                           <div className="flex items-center gap-4">
-                            <div className="flex h-24 w-32 shrink-0 items-center justify-center rounded-[18px] border border-white/10 bg-white/6 text-pink-200">
+                            <div className="flex h-24 w-32 shrink-0 items-center justify-center rounded-[14px] border border-white/10 bg-white/6 text-pink-200">
                               <HouseLine weight="fill" className="h-10 w-10" />
                             </div>
                             <div className="min-w-0 flex-1">
@@ -300,7 +345,7 @@ export function TripPlannerDrawer({
                         </div>
                       )}
 
-                      {artifact.events?.events?.[0] && (
+                      {highlightEvent && (
                         <div className={panelClassName("p-6")}>
                           <div className="flex items-center gap-2">
                             <Sparkle weight="fill" className="h-4 w-4 text-emerald-200" />
@@ -308,12 +353,23 @@ export function TripPlannerDrawer({
                               Worth checking out
                             </p>
                           </div>
+                          <div className="relative mt-5 h-44 w-full overflow-hidden rounded-[16px]">
+                            <PlannerPexelsImage
+                              imageQuery={`${highlightEvent.name} ${eventsImageDestination} ${highlightEvent.category}`.trim()}
+                              alt={highlightEvent.name}
+                              className="h-full w-full object-cover"
+                              colorIndex={highlightEvent.id
+                                .split("")
+                                .reduce((a, c) => a + c.charCodeAt(0), 0)}
+                            />
+                            <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/55 via-black/15 to-transparent" />
+                          </div>
                           <p className="mt-4 text-[30px] font-semibold leading-tight text-white">
-                            {artifact.events.events[0].name}
+                            {highlightEvent.name}
                           </p>
-                          <p className="mt-2 text-[16px] text-white/56">{artifact.events.events[0].date}</p>
+                          <p className="mt-2 text-[16px] text-white/56">{highlightEvent.date}</p>
                           <p className="mt-4 text-[18px] leading-8 text-white/76">
-                            {artifact.events.events[0].description}
+                            {highlightEvent.description}
                           </p>
                         </div>
                       )}
@@ -329,21 +385,26 @@ export function TripPlannerDrawer({
 
                           <div className="mt-5 space-y-4">
                             {itineraryPreview.map((day) => {
-                              const previewImage = `https://source.unsplash.com/featured/480x320/?${encodeURIComponent(
-                                day.theme || day.activities[0]?.location.name || artifact.destination
-                              )}`;
+                              const imageQuery = [
+                                day.theme,
+                                day.activities[0]?.location.name,
+                                artifact.destination,
+                              ]
+                                .filter(Boolean)
+                                .join(" ")
+                                .trim() || artifact.destination;
 
                               return (
                                 <div
                                   key={`day-${day.day}`}
-                                  className="rounded-[22px] border border-white/10 bg-white/5 p-4"
+                                  className="rounded-[16px] border border-white/10 bg-white/5 p-4"
                                 >
                                   <div className="flex items-center gap-4">
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img
-                                      src={previewImage}
+                                    <PlannerPexelsImage
+                                      imageQuery={`${imageQuery} travel destination`}
                                       alt={day.theme ?? `Day ${day.day}`}
-                                      className="h-24 w-32 shrink-0 rounded-[16px] object-cover"
+                                      className="h-24 w-32 shrink-0 rounded-[12px] object-cover"
+                                      colorIndex={day.day}
                                     />
                                     <div className="min-w-0">
                                       <div className="flex flex-wrap items-center gap-2">
@@ -374,7 +435,7 @@ export function TripPlannerDrawer({
                     </div>
                   </div>
 
-                  <div className="border-t border-white/8 bg-[#102555]/92 px-8 py-5">
+                  <div className="border-t border-white/10 bg-[#141414]/95 px-8 py-5 backdrop-blur-md">
                     <div className="flex items-center justify-between gap-4">
                       <div>
                         <p className="text-base text-white/54">Ready when you are</p>
@@ -384,12 +445,12 @@ export function TripPlannerDrawer({
                       </div>
                       <button
                         type="button"
-                        onClick={onPrimaryAction}
+                        onClick={handlePrimaryClick}
                         disabled={!onPrimaryAction}
                         className={cn(
                           "inline-flex items-center gap-3 rounded-full px-7 py-4 text-xl font-semibold text-white",
                           onPrimaryAction
-                            ? "bg-[linear-gradient(180deg,#8ab8ff,#4f86ff)] shadow-[0_14px_32px_rgba(59,130,246,0.22)]"
+                            ? "border border-white/14 bg-[linear-gradient(180deg,#2e2e2e,#1c1c1c)] shadow-[0_14px_32px_rgba(0,0,0,0.4)] hover:bg-[linear-gradient(180deg,#363636,#222)]"
                             : "bg-[#d7d7df]"
                         )}
                       >

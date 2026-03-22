@@ -98,7 +98,7 @@ export async function executeBrowserFlow(
 ): Promise<BrowserExecutionResult> {
   const env = getStagehandEnv();
   const browserbaseApiKey = process.env.BB_API_KEY;
-  const browserbaseProjectId =process.env.BB_PROJECT_ID;
+  const browserbaseProjectId = process.env.BB_PROJECT_ID;
   const stagehandModel = getStagehandModelConfig();
   const stagehandAgentModel = getStagehandModelConfig(process.env.STAGEHAND_AGENT_MODEL);
   const stagehandExecutionModel = getStagehandModelConfig(process.env.STAGEHAND_EXECUTION_MODEL);

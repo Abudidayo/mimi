@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useUser } from "@civic/auth/react";
 import { useMutation, useQuery } from "convex/react";
 import {
@@ -20,6 +20,10 @@ export function usePersistedChatSessions() {
   const { user } = useUser();
   const [guestOwnerKey] = useState<string | null>(() => getStoredGuestOwnerKey());
   const ownerKey = user?.id ?? guestOwnerKey ?? undefined;
+  const convexUserId = useMemo(
+    () => (typeof user?.id === "string" && user.id.length > 0 ? user.id : undefined),
+    [user?.id]
+  );
   const [sessionSelections, setSessionSelections] = useState<Record<string, string | undefined>>({});
 
   const sessionsQuery = useQuery(
@@ -27,12 +31,27 @@ export function usePersistedChatSessions() {
     ownerKey ? { ownerKey } : "skip"
   );
   const sessions = useMemo<PersistedChatSession[]>(() => sessionsQuery ?? [], [sessionsQuery]);
+  const sessionsHaveLoaded = sessionsQuery !== undefined;
+
+  /** Until list includes a row we just created, keep persisting so saveSession can patch, not insert a duplicate. */
+  const [pendingNewSessionId, setPendingNewSessionId] = useState<string | null>(null);
 
   const desiredSessionId = ownerKey
     ? sessionSelections[ownerKey] ?? readStoredActiveSessionId(ownerKey) ?? undefined
     : undefined;
+
+  useEffect(() => {
+    if (!pendingNewSessionId) return;
+    if (sessions.some((s) => s.sessionId === pendingNewSessionId)) {
+      setPendingNewSessionId(null);
+    }
+  }, [pendingNewSessionId, sessions]);
+
   const activeSessionId =
-    desiredSessionId && sessions.some((session) => session.sessionId === desiredSessionId)
+    desiredSessionId &&
+    (!sessionsHaveLoaded ||
+      sessions.some((session) => session.sessionId === desiredSessionId) ||
+      pendingNewSessionId === desiredSessionId)
       ? desiredSessionId
       : undefined;
 
@@ -49,6 +68,7 @@ export function usePersistedChatSessions() {
   const handleSelectSession = useCallback(
     (sessionId: string) => {
       if (!ownerKey) return;
+      setPendingNewSessionId(null);
       setSessionSelections((prev) => ({ ...prev, [ownerKey]: sessionId }));
       writeStoredActiveSessionId(ownerKey, sessionId);
     },
@@ -58,6 +78,7 @@ export function usePersistedChatSessions() {
   const handleReturnHome = useCallback(() => {
     if (!ownerKey) return;
 
+    setPendingNewSessionId(null);
     setSessionSelections((prev) => ({ ...prev, [ownerKey]: undefined }));
     writeStoredActiveSessionId(ownerKey, null);
   }, [ownerKey]);
@@ -67,18 +88,20 @@ export function usePersistedChatSessions() {
       if (!ownerKey) return undefined;
 
       const sessionId = createSessionId();
+
       await createSessionMutation({
         ownerKey,
-        userId: user?.id,
+        userId: convexUserId,
         sessionId,
         title: getSessionTitleFromPrompt(prompt),
       });
 
+      setPendingNewSessionId(sessionId);
       setSessionSelections((prev) => ({ ...prev, [ownerKey]: sessionId }));
       writeStoredActiveSessionId(ownerKey, sessionId);
       return sessionId;
     },
-    [createSessionMutation, ownerKey, user?.id]
+    [convexUserId, createSessionMutation, ownerKey]
   );
 
   const handleRenameSession = useCallback(
@@ -115,6 +138,7 @@ export function usePersistedChatSessions() {
       });
 
       if (activeSessionId === sessionId) {
+        setPendingNewSessionId(null);
         setSessionSelections((prev) => ({ ...prev, [ownerKey]: undefined }));
         writeStoredActiveSessionId(ownerKey, null);
       }
@@ -127,16 +151,20 @@ export function usePersistedChatSessions() {
       if (!ownerKey) return;
 
       const existingSession = sessions.find((session) => session.sessionId === sessionId);
-      await saveSessionMutation({
-        ownerKey,
-        userId: user?.id,
-        sessionId,
-        title: existingSession?.title,
-        messages: snapshot.messages as unknown[],
-        controlValues: snapshot.controlValues,
-      });
+      try {
+        await saveSessionMutation({
+          ownerKey,
+          userId: convexUserId,
+          sessionId,
+          title: existingSession?.title,
+          messages: snapshot.messages as unknown[],
+          controlValues: snapshot.controlValues,
+        });
+      } catch (e) {
+        console.error("[chat] saveSession failed", e);
+      }
     },
-    [ownerKey, saveSessionMutation, sessions, user?.id]
+    [convexUserId, ownerKey, saveSessionMutation, sessions]
   );
 
   return {
