@@ -96,15 +96,13 @@ export async function POST(req: Request) {
     }
 
     // Prepend a Luffa-context system note as the first user message if this is a fresh conversation
+    const transcript = history
+      .map((entry) => `${entry.role === 'user' ? 'User' : 'Assistant'}: ${entry.content}`)
+      .join('\n\n');
+
     const luffaContext = history.length === 1
-      ? [
-          {
-            role: 'user' as const,
-            content: '[SYSTEM NOTE: You are responding inside Luffa, a mobile text chat app. There are NO UI cards, NO inline controls, NO date pickers, NO buttons — plain text only. ALWAYS present choices as numbered lists (1. Option\n2. Option\n3. Option) so the user can reply with just a number. This applies to destinations, activities, hotels, food, budgets — any time you offer options. Ask follow-up questions as plain text. Keep responses concise and mobile-friendly.]',
-          },
-          ...history,
-        ]
-      : history;
+      ? `[SYSTEM NOTE: You are responding inside Luffa, a mobile text chat app. There are NO UI cards, NO inline controls, NO date pickers, NO buttons — plain text only. ALWAYS present choices as numbered lists (1. Option\n2. Option\n3. Option) so the user can reply with just a number. This applies to destinations, activities, hotels, food, budgets — any time you offer options. Ask follow-up questions as plain text. Keep responses concise and mobile-friendly.]\n\n${transcript}`
+      : transcript;
 
     // Call the supervisor agent (non-streaming)
     const supervisor = mastra.getAgent('supervisor');
