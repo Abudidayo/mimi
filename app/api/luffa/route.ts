@@ -74,7 +74,8 @@ export async function POST(req: Request) {
     }
 
     // Get or create conversation history
-    if (!conversations.has(conversationId)) {
+    const isNewConversation = !conversations.has(conversationId);
+    if (isNewConversation) {
       conversations.set(conversationId, []);
     }
     const history = conversations.get(conversationId)!;
@@ -87,9 +88,20 @@ export async function POST(req: Request) {
       history.splice(0, history.length - 20);
     }
 
+    // Prepend a Luffa-context system note as the first user message if this is a fresh conversation
+    const luffaContext = history.length === 1
+      ? [
+          {
+            role: 'user' as const,
+            content: '[SYSTEM NOTE: You are responding inside Luffa, a mobile text chat app. There are NO UI cards, NO inline controls, NO date pickers, NO buttons — plain text only. ALWAYS present choices as numbered lists (1. Option\n2. Option\n3. Option) so the user can reply with just a number. This applies to destinations, activities, hotels, food, budgets — any time you offer options. Ask follow-up questions as plain text. Keep responses concise and mobile-friendly.]',
+          },
+          ...history,
+        ]
+      : history;
+
     // Call the supervisor agent (non-streaming)
     const supervisor = mastra.getAgent('supervisor');
-    const result = await supervisor.generate(history);
+    const result = await supervisor.generate(luffaContext);
 
     // Extract text from the result
     let responseText = '';
@@ -103,7 +115,7 @@ export async function POST(req: Request) {
     // Save assistant reply to history
     history.push({ role: 'assistant', content: cleaned });
 
-    return NextResponse.json({ reply: cleaned });
+    return NextResponse.json({ reply: cleaned, isNewConversation });
   } catch (err) {
     console.error('[Luffa API]', err);
     return NextResponse.json(
@@ -111,4 +123,10 @@ export async function POST(req: Request) {
       { status: 500 },
     );
   }
+}
+
+export async function DELETE(req: Request) {
+  const { conversationId = 'default' } = await req.json().catch(() => ({}));
+  conversations.delete(conversationId);
+  return NextResponse.json({ ok: true });
 }
