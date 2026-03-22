@@ -2,29 +2,46 @@
 
 import { useEffect, useId, useState } from "react";
 import { motion } from "framer-motion";
+import Script from "next/script";
 import {
   ArrowsLeftRight,
+  Browser,
+  LockKey,
+  MicrophoneStage,
+  ShieldCheck,
+  Sparkle,
 } from "@phosphor-icons/react";
 
+declare global {
+  interface Window {
+    mermaid?: {
+      initialize: (config: Record<string, unknown>) => void;
+      render: (id: string, chart: string) => Promise<{ svg: string }>;
+    };
+  }
+}
+
 const slideVariants = {
-  hidden: { opacity: 0, y: 24 },
+  hidden: { opacity: 0, y: 18 },
   visible: {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.55,
-      ease: "easeOut",
+      duration: 0.45,
+      ease: "easeOut" as const,
     },
   },
 };
 
 function Slide({
-  eyebrow,
+  index,
   title,
+  subtitle,
   children,
 }: {
-  eyebrow: string;
+  index: string;
   title: string;
+  subtitle?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -33,41 +50,176 @@ function Slide({
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.2 }}
-      className="relative rounded-[36px] border border-white/12 bg-[linear-gradient(180deg,rgba(17,38,91,0.96),rgba(8,19,56,0.98))] px-7 py-8 shadow-[0_24px_80px_rgba(5,10,33,0.35)] backdrop-blur-xl md:px-10 md:py-10"
+      className="border border-white/10 bg-[#141414] px-6 py-7 shadow-[0_20px_70px_rgba(0,0,0,0.45)] md:px-8 md:py-8"
     >
-      <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.32em] text-sky-200/70">
-        {eyebrow}
-      </p>
-      <h2 className="max-w-4xl text-3xl font-semibold leading-tight text-white md:text-5xl">
-        {title}
-      </h2>
-      <div className="mt-8">{children}</div>
+      <div className="flex items-start justify-between gap-6 border-b border-white/8 pb-5">
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-white/45">
+            {index}
+          </p>
+          <h2 className="mt-2 text-3xl font-semibold tracking-tight text-white md:text-4xl">
+            {title}
+          </h2>
+          {subtitle && (
+            <p className="mt-3 max-w-3xl text-base leading-7 text-white/64 md:text-lg">
+              {subtitle}
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="mt-6">{children}</div>
     </motion.section>
   );
 }
 
-function Pill({ children }: { children: React.ReactNode }) {
+function Tag({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center rounded-full border border-white/14 bg-white/8 px-3 py-1 text-sm font-medium text-white/88">
+    <span className="inline-flex items-center border border-white/12 px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-white/68">
       {children}
     </span>
   );
 }
 
-function BulletList({ items }: { items: string[] }) {
+function Bullet({ children }: { children: React.ReactNode }) {
   return (
-    <div className="space-y-3">
-      {items.map((item) => (
-        <div key={item} className="flex items-start gap-3">
-          <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-gradient-to-br from-sky-300 to-fuchsia-400" />
-          <p className="text-lg leading-relaxed text-white/84 md:text-xl">{item}</p>
-        </div>
-      ))}
+    <div className="flex items-start gap-3">
+      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-white/55" />
+      <p className="text-lg leading-8 text-white/82">{children}</p>
     </div>
   );
 }
 
-function MermaidCard() {
+function StatCard({
+  title,
+  body,
+}: {
+  title: string;
+  body: string;
+}) {
+  return (
+    <div className="border border-white/10 bg-white/[0.03] p-5">
+      <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/42">{title}</p>
+      <p className="mt-3 text-base leading-7 text-white/80">{body}</p>
+    </div>
+  );
+}
+
+function QuoteCard() {
+  return (
+    <div className="border border-white/10 bg-white/[0.03] p-6">
+      <p className="text-2xl font-medium leading-tight text-white md:text-3xl">
+        “Good design starts with the customer experience and works back toward the technology.”
+      </p>
+      <p className="mt-4 text-sm uppercase tracking-[0.18em] text-white/45">Steve Jobs</p>
+    </div>
+  );
+}
+
+function MermaidRenderer({ chart }: { chart: string }) {
+  const id = useId().replace(/:/g, "");
+  const [svg, setSvg] = useState<string>("");
+
+  useEffect(() => {
+    let active = true;
+    let attempts = 0;
+
+    async function renderChart() {
+      const mermaid = window.mermaid;
+      if (!mermaid) {
+        if (attempts < 20) {
+          attempts += 1;
+          window.setTimeout(() => {
+            void renderChart();
+          }, 150);
+        }
+        return;
+      }
+
+      mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: "loose",
+        theme: "base",
+        themeVariables: {
+          background: "#141414",
+          primaryColor: "#262626",
+          primaryTextColor: "#f8fafc",
+          primaryBorderColor: "#525252",
+          secondaryColor: "#171717",
+          tertiaryColor: "#404040",
+          lineColor: "#a3a3a3",
+          clusterBkg: "#171717",
+          clusterBorder: "#525252",
+          fontFamily: "Geist, ui-sans-serif, system-ui",
+          fontSize: "16px",
+        },
+        flowchart: {
+          curve: "basis",
+          htmlLabels: true,
+          nodeSpacing: 40,
+          rankSpacing: 65,
+          padding: 16,
+        },
+      });
+
+      const { svg } = await mermaid.render(`mimi-mermaid-${id}`, chart);
+      if (active) setSvg(svg);
+    }
+
+    void renderChart();
+
+    return () => {
+      active = false;
+    };
+  }, [chart, id]);
+
+  return (
+    <div className="border border-white/10 bg-[#161616] p-4">
+      {svg ? (
+        <div
+          className="[&_.edgeLabel]:!bg-transparent [&_.label]:!text-white [&_.node_label]:!text-white [&_svg]:h-auto [&_svg]:w-full"
+          dangerouslySetInnerHTML={{ __html: svg }}
+        />
+      ) : (
+        <div className="flex min-h-[360px] items-center justify-center text-white/45">
+          Rendering Mermaid diagram...
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TechnicalGrid() {
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      <StatCard
+        title="Agent Orchestration"
+        body="Mastra supervisor routing, specialist agents, itinerary gating on transport + stay, and browser-backed booking execution with a visible run timeline."
+      />
+      <StatCard
+        title="Generative UI"
+        body="Inline controls and structured cards replace repeated text clarification. This lowers token usage, compresses approval loops, and makes agent interaction much more usable."
+      />
+      <StatCard
+        title="Generative UI"
+        body="Inline controls and structured cards replace repeated text clarification. This lowers token usage, compresses approval loops, and makes agent interaction much more usable."
+      />
+      <StatCard
+        title="Browser Execution"
+        body="Stagehand powers live browser-use so Mimi can attempt reservation workflows, surface each step, and stop safely before checkout."
+      />
+      <StatCard
+        title="Guardrails"
+        body="Topic guardrails, specialist boundaries, hidden action prompts, sanitized persistence, and stop-at-checkout browser limits keep execution useful without feeling reckless."
+      />
+      <StatCard
+        title="Multilingual + Voice"
+        body="Mimi is designed for multilingual interaction and voice-first usage, so the same orchestration model can work across typed chat, realtime voice, and messaging surfaces."
+      />
+    </div>
+  );
+}
+
+export default function PresentationPage() {
   const chart = `flowchart LR
   U["User"] --> S["Supervisor Agent"]
   S --> UI["Generative UI"]
@@ -82,260 +234,198 @@ function MermaidCard() {
   B --> R["Browser Execution"]`;
 
   return (
-    <div className="overflow-hidden rounded-[28px] border border-white/12 bg-[#0b173d]/90 shadow-[0_20px_60px_rgba(5,10,33,0.35)]">
-      <div className="border-b border-white/10 bg-white/5 px-5 py-3">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/45">
-          Mermaid Architecture
-        </p>
-      </div>
-      <div className="p-6">
-        <div className="relative rounded-3xl border border-white/8 bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.18),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-6">
-          <MermaidRenderer chart={chart} />
-        </div>
-        <div className="mt-5 rounded-2xl border border-white/8 bg-white/4 px-4 py-3">
-          <p className="text-sm leading-6 text-white/62">
-            Mermaid-rendered architecture view: the supervisor coordinates specialists, the planner assembles a structured trip artifact, and the booking layer executes through the browser.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
+    <main
+      className="min-h-screen text-white"
+      style={{
+        fontFamily: "Geist, Inter, ui-sans-serif, system-ui, sans-serif",
+        backgroundColor: "#0d0d0d",
+        backgroundImage: [
+          "radial-gradient(ellipse 125% 90% at 50% 100%, rgba(36, 58, 108, 0.48) 0%, rgba(22, 38, 78, 0.22) 42%, transparent 66%)",
+          "radial-gradient(ellipse 95% 68% at 18% 100%, rgba(45, 72, 130, 0.18) 0%, transparent 50%)",
+          "radial-gradient(ellipse 95% 68% at 82% 100%, rgba(45, 72, 130, 0.18) 0%, transparent 50%)",
+        ].join(", "),
+        backgroundRepeat: "no-repeat",
+        backgroundSize: "100% 100%",
+        backgroundAttachment: "fixed",
+      }}
+    >
+      <Script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js" strategy="afterInteractive" />
 
-function MermaidRenderer({ chart }: { chart: string }) {
-  const id = useId().replace(/:/g, "");
-  const [svg, setSvg] = useState<string>("");
-
-  useEffect(() => {
-    let active = true;
-
-    async function renderChart() {
-      const mermaid = (await import("mermaid")).default;
-      mermaid.initialize({
-        startOnLoad: false,
-        securityLevel: "loose",
-        theme: "base",
-        themeVariables: {
-          background: "#0d1a45",
-          primaryColor: "#1d3f8d",
-          primaryTextColor: "#ffffff",
-          primaryBorderColor: "#60a5fa",
-          lineColor: "#93c5fd",
-          secondaryColor: "#172554",
-          tertiaryColor: "#312e81",
-          fontFamily: "Fredoka, ui-sans-serif, system-ui",
-        },
-        flowchart: {
-          curve: "basis",
-          htmlLabels: true,
-          nodeSpacing: 40,
-          rankSpacing: 60,
-          padding: 20,
-        },
-      });
-
-      const { svg } = await mermaid.render(`mimi-mermaid-${id}`, chart);
-      if (active) {
-        setSvg(svg);
-      }
-    }
-
-    void renderChart();
-
-    return () => {
-      active = false;
-    };
-  }, [chart, id]);
-
-  return (
-    <div className="min-h-[440px] overflow-auto rounded-3xl border border-white/8 bg-[#0d1a45]/70 p-4">
-      {svg ? (
-        <div
-          className="[&_.edgeLabel]:!bg-transparent [&_.label]:!text-white [&_.node_label]:!text-white [&_svg]:h-auto [&_svg]:w-full"
-          dangerouslySetInnerHTML={{ __html: svg }}
-        />
-      ) : (
-        <div className="flex min-h-[400px] items-center justify-center text-white/55">
-          Rendering Mermaid diagram...
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default function PresentationPage() {
-  return (
-    <main className="min-h-screen overflow-x-hidden bg-[linear-gradient(180deg,#081338_0%,#0c1d49_38%,#11265b_100%)] text-white">
-      <div className="mx-auto flex max-w-7xl flex-col gap-10 px-4 py-10 md:px-8 md:py-14">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 md:px-8 md:py-10">
         <motion.header
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-          className="relative overflow-hidden rounded-[40px] border border-white/12 bg-[radial-gradient(circle_at_top,rgba(168,85,247,0.25),transparent_34%),radial-gradient(circle_at_left,rgba(56,189,248,0.18),transparent_36%),linear-gradient(180deg,rgba(17,38,91,0.98),rgba(8,19,56,0.98))] px-7 py-10 shadow-[0_26px_90px_rgba(5,10,33,0.4)] md:px-12 md:py-14"
+          transition={{ duration: 0.45, ease: "easeOut" }}
+          className="border border-white/10 bg-[#121212] px-6 py-8 md:px-8 md:py-10"
         >
-          <div className="absolute right-6 top-6 h-28 w-28 rounded-full bg-fuchsia-400/12 blur-3xl" />
-          <div className="absolute bottom-0 left-0 h-32 w-32 rounded-full bg-sky-400/12 blur-3xl" />
+          <div className="flex flex-wrap gap-2">
+            <Tag>AI Agents</Tag>
+            <Tag>Generative UI</Tag>
+            <Tag>Browser Execution</Tag>
+          </div>
 
-          <div className="relative z-10 max-w-5xl">
-            <div className="mb-4 flex flex-wrap gap-2">
-              <Pill>AI Agents</Pill>
-              <Pill>Generative UI</Pill>
-              <Pill>Browser Execution</Pill>
+          <div className="mt-8 grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+            <div>
+              <p className="text-sm uppercase tracking-[0.22em] text-white/42">Mimi</p>
+              <h1 className="mt-3 text-5xl font-semibold tracking-tight text-white md:text-7xl">
+                Agentic Travel Planning
+              </h1>
+              <p className="mt-4 max-w-3xl text-xl leading-9 text-white/66 md:text-2xl">
+                Low-friction human approval through multi-agent orchestration, generative UI, and browser execution.
+              </p>
+              <div className="mt-8 inline-flex items-center gap-2 border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-medium text-white/82">
+                <ArrowsLeftRight weight="bold" className="h-4 w-4 text-white/72" />
+                We don&apos;t remove the human. We remove the work.
+              </div>
             </div>
-            <h1 className="text-5xl font-semibold leading-none tracking-tight md:text-7xl">
-              Mimi
-            </h1>
-            <p className="mt-4 max-w-4xl text-xl leading-relaxed text-sky-100/88 md:text-2xl">
-              Agentic Travel Planning With Low-Friction Human Approval
-            </p>
-            <p className="mt-3 max-w-4xl text-base leading-7 text-white/70 md:text-lg">
-              Multi-agent orchestration, generative UI, and browser execution for real trip planning.
-            </p>
-            <div className="mt-8 inline-flex items-center gap-2 rounded-full border border-white/14 bg-white/8 px-4 py-2 text-sm font-semibold text-white/90">
-              <ArrowsLeftRight weight="bold" className="h-4 w-4 text-sky-200" />
-              We don&apos;t remove the human. We remove the work.
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+              <div className="border border-white/10 bg-white/[0.03] p-5">
+                <p className="text-xs uppercase tracking-[0.18em] text-white/42">Product thesis</p>
+                <p className="mt-3 text-lg leading-8 text-white/82">
+                  Consumer autonomy should be collaborative, not authoritarian.
+                </p>
+              </div>
+              <div className="border border-white/10 bg-white/[0.03] p-5">
+                <p className="text-xs uppercase tracking-[0.18em] text-white/42">Innovation focus</p>
+                <p className="mt-3 text-lg leading-8 text-white/82">
+                  Generative UI turns approval into a product interaction, not another prompt.
+                </p>
+              </div>
             </div>
           </div>
         </motion.header>
 
-        <Slide eyebrow="Slide 2" title="Why Travel AI Still Feels Broken">
-          <div className="grid gap-6 lg:grid-cols-2">
-            <div className="rounded-[28px] border border-white/10 bg-white/5 p-6">
-              <BulletList
-                items={[
-                  "Most travel assistants are still text-heavy.",
-                  "Users keep repeating preferences in natural language.",
-                  "Planning, transport, stays, safety, packing, and booking are fragmented.",
-                  "Most so-called agents still talk more than they act.",
-                ]}
-              />
+        <Slide
+          index="Slide 2"
+          title="Why Travel AI Still Feels Broken"
+          subtitle="The problem is not model intelligence. It is the interaction model."
+        >
+          <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="space-y-4 border border-white/10 bg-white/[0.03] p-6">
+              <Bullet>Most travel assistants are still text-heavy.</Bullet>
+              <Bullet>Users keep repeating preferences in natural language.</Bullet>
+              <Bullet>Planning, transport, stays, safety, packing, and booking are fragmented.</Bullet>
+              <Bullet>Many so-called agents still talk more than they act.</Bullet>
             </div>
-            <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03))] p-6">
-              <p className="text-2xl font-semibold leading-snug text-white">
-                “Good design starts with the customer experience and works back toward the technology.”
-              </p>
-              <p className="mt-4 text-base font-medium uppercase tracking-[0.2em] text-fuchsia-200/80">
-                Steve Jobs
-              </p>
-              <div className="mt-8 rounded-3xl border border-white/8 bg-[#11265b]/70 p-5">
-                <p className="text-sm uppercase tracking-[0.26em] text-white/40">Design takeaway</p>
-                <p className="mt-3 text-lg leading-8 text-white/78">
-                  The core challenge is not model capability. It&apos;s reducing friction while still respecting human choice.
-                </p>
-              </div>
-            </div>
+            <QuoteCard />
           </div>
         </Slide>
 
-        <Slide eyebrow="Slide 3" title="How Mimi Works">
-          <div className="grid gap-6">
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {[
-                "A supervisor agent coordinates specialist agents.",
-                "Specialists handle transport, lodging, weather, safety, packing, discovery, itinerary, and booking.",
-                "Generative UI replaces repeated text clarification with inline controls and structured cards.",
-                "Once the user confirms, Mimi can attempt live browser-based booking workflows.",
-              ].map((item) => (
-                <div
-                  key={item}
-                  className="rounded-[24px] border border-white/10 bg-white/5 p-5 text-base leading-7 text-white/82"
-                >
-                  {item}
+        <Slide
+          index="Slide 3"
+          title="Core Technical Architecture"
+          subtitle="The system is not just a chat wrapper. It is a multi-agent orchestration layer paired with generative UI, guardrails, and live execution."
+        >
+          <TechnicalGrid />
+          <div className="mt-5">
+            <MermaidRenderer chart={chart} />
+          </div>
+        </Slide>
+
+        <Slide
+          index="Slide 4"
+          title="Sponsor Track: Civic"
+          subtitle="Civic gives Mimi identity, secure user context, and trusted integrations into the user’s real productivity surface."
+        >
+          <div className="grid gap-4 lg:grid-cols-[1fr_0.9fr]">
+            <div className="space-y-4 border border-white/10 bg-white/[0.03] p-6">
+              <Bullet>Civic identity gives Mimi authenticated user context instead of anonymous prompt-only state.</Bullet>
+              <Bullet>That identity layer unlocks Google-connected flows like Docs, Sheets, and Calendar exports from the trip artifact.</Bullet>
+              <Bullet>It supports agentic security by tying actions to a real signed-in user before touching personal workspace tools.</Bullet>
+              <Bullet>Combined with guardrails, it helps keep browser-use and workflow execution bounded to the right user and the right approvals.</Bullet>
+            </div>
+
+            <div className="space-y-4">
+              <div className="border border-white/10 bg-[#161616] p-6">
+                <div className="flex items-center gap-3 text-white/72">
+                  <LockKey weight="fill" className="h-5 w-5" />
+                  <p className="text-xs uppercase tracking-[0.18em]">Civic impact</p>
                 </div>
-              ))}
-            </div>
-            <MermaidCard />
-          </div>
-        </Slide>
-
-        <Slide eyebrow="Slide 4" title="What Makes This More Than A Chatbot">
-          <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="rounded-[28px] border border-white/10 bg-white/5 p-6">
-              <BulletList
-                items={[
-                  "The system chooses which specialists to run and when.",
-                  "It gathers missing inputs with UI instead of long text exchanges.",
-                  "It gates itinerary generation on transport and stay readiness.",
-                  "It surfaces plans, selections, and browser actions transparently.",
-                  "It can execute booking flows and stop safely at checkout.",
-                ]}
-              />
-            </div>
-            <div className="flex flex-col gap-4">
-              <div className="rounded-[28px] border border-sky-300/18 bg-[linear-gradient(180deg,rgba(56,189,248,0.12),rgba(168,85,247,0.08))] p-6">
-                <p className="text-sm font-semibold uppercase tracking-[0.28em] text-sky-200/70">
-                  Core idea
-                </p>
-                <p className="mt-3 text-2xl font-semibold leading-snug text-white">
-                  The agent reasons. The UI compresses approval. The browser executes.
+                <p className="mt-4 text-3xl font-semibold leading-tight text-white">
+                  Identity turns agent actions into trusted user workflows.
                 </p>
               </div>
-              <div className="rounded-[28px] border border-white/10 bg-white/5 p-6">
-                <p className="text-sm uppercase tracking-[0.26em] text-white/40">Judge lens</p>
-                <p className="mt-3 text-lg leading-8 text-white/78">
-                  This is not just tool calling. It is a multi-step workflow with orchestration, edits, visibility, and safe execution boundaries.
+
+              <div className="border border-white/10 bg-white/[0.03] p-6">
+                <div className="flex items-center gap-3 text-emerald-300">
+                  <ShieldCheck weight="fill" className="h-5 w-5" />
+                  <p className="text-xs uppercase tracking-[0.18em]">Agentic security</p>
+                </div>
+                <p className="mt-4 text-lg leading-8 text-white/78">
+                  Civic, tool boundaries, and our approval model work together so the agent can act with more context while still preserving consent, identity, and security constraints.
                 </p>
               </div>
             </div>
           </div>
         </Slide>
 
-        <Slide eyebrow="Slide 5" title="Autonomy People Would Actually Use">
-          <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="rounded-[28px] border border-white/10 bg-white/5 p-6">
-              <BulletList
-                items={[
-                  "Less text, lower friction, fewer wasted tokens.",
-                  "More trust through visible plans and editable controls.",
-                  "A better fit for real consumer decision-making.",
-                  "A pattern that extends beyond travel into other multi-step workflows.",
-                ]}
-              />
+        <Slide
+          index="Slide 5"
+          title="Sponsor Track: Luffa"
+          subtitle="Luffa extends Mimi beyond the web app into a messaging and voice surface that can proactively help before, during, and after the trip."
+        >
+          <div className="grid gap-4 lg:grid-cols-[1fr_0.9fr]">
+            <div className="space-y-4 border border-white/10 bg-white/[0.03] p-6">
+              <Bullet>Luffa gives Mimi a lightweight companion surface for reminders and notifications about the trip.</Bullet>
+              <Bullet>That means airport reminders, packing nudges, schedule prompts, and trip updates can reach the user outside the main app.</Bullet>
+              <Bullet>We also support realtime voice patterns and multilingual interaction, so the same orchestration can work across chat, voice, and mobile messaging.</Bullet>
+              <Bullet>Next, we plan to add crypto payments directly through the Luffa bot so reservation and payment intent can happen in the same assistant surface.</Bullet>
             </div>
-            <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-6">
+            <div className="grid gap-4">
+              <div className="border border-white/10 bg-[#161616] p-6">
+                <div className="flex items-center gap-3 text-fuchsia-300">
+                  <MicrophoneStage weight="fill" className="h-5 w-5" />
+                  <p className="text-xs uppercase tracking-[0.18em]">Luffa impact</p>
+                </div>
+                <p className="mt-4 text-3xl font-semibold leading-tight text-white">
+                  One agent system, multiple surfaces: web, voice, bot, reminders.
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="border border-white/10 bg-[#161616] p-4">
+                  <MicrophoneStage className="h-5 w-5 text-emerald-300" weight="fill" />
+                  <p className="mt-3 text-sm uppercase tracking-[0.15em] text-white/42">Realtime voice</p>
+                </div>
+                <div className="border border-white/10 bg-[#161616] p-4">
+                  <Sparkle className="h-5 w-5 text-white/72" weight="fill" />
+                  <p className="mt-3 text-sm uppercase tracking-[0.15em] text-white/42">Multilingual</p>
+                </div>
+                <div className="border border-white/10 bg-[#161616] p-4">
+                  <Browser className="h-5 w-5 text-fuchsia-300" weight="fill" />
+                  <p className="mt-3 text-sm uppercase tracking-[0.15em] text-white/42">Bot reminders</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Slide>
+
+        <Slide
+          index="Slide 6"
+          title="Why This Matters"
+          subtitle="The real innovation is not autonomy without humans. It is autonomy with radically lower supervision cost."
+        >
+          <div className="grid gap-4 lg:grid-cols-[1fr_0.9fr]">
+            <div className="space-y-4 border border-white/10 bg-white/[0.03] p-6">
+              <Bullet>Generative UI is the core interaction innovation in this project.</Bullet>
+              <Bullet>It turns approval from a prompt-writing problem into a product-design problem.</Bullet>
+              <Bullet>That means less text, lower token use, faster iteration, and more trustworthy agent behavior.</Bullet>
+              <Bullet>Mimi shows that useful autonomy is collaborative, visible, and action-oriented.</Bullet>
+            </div>
+            <div className="border border-white/10 bg-[#161616] p-6">
               <div className="flex flex-wrap gap-2">
-                <Pill>Autonomy</Pill>
-                <Pill>Usefulness</Pill>
-                <Pill>Execution</Pill>
+                <Tag>Autonomy</Tag>
+                <Tag>Generative UI</Tag>
+                <Tag>Security</Tag>
+                <Tag>Voice</Tag>
               </div>
-              <p className="mt-6 text-3xl font-semibold leading-tight text-white">
-                Mimi shows that useful autonomy is collaborative, visible, and action-oriented.
-              </p>
-              <p className="mt-4 text-lg leading-8 text-white/72">
-                We&apos;re not trying to replace human judgment. We&apos;re trying to eliminate human busywork.
+              <p className="mt-5 text-3xl font-semibold leading-tight text-white">
+                We’re not trying to replace human judgment.
+                <br />
+                We’re trying to eliminate human busywork.
               </p>
             </div>
-          </div>
-        </Slide>
-
-        <Slide eyebrow="Demo" title="Live Demo Flow">
-          <div className="grid gap-4 md:grid-cols-4">
-            {[
-              {
-                title: "1. Start broad",
-                body: "“I want to go to Albania with my girlfriend next week.”",
-              },
-              {
-                title: "2. Gather context",
-                body: "Show city suggestions and inline controls for missing trip info.",
-              },
-              {
-                title: "3. Build the trip",
-                body: "Run specialists, open the planner drawer, and show the trip artifact.",
-              },
-              {
-                title: "4. Execute",
-                body: "Trigger booking, show the browser timeline, and stop safely at checkout.",
-              },
-            ].map((step) => (
-              <div
-                key={step.title}
-                className="rounded-[26px] border border-white/10 bg-white/5 p-5"
-              >
-                <p className="text-lg font-semibold text-white">{step.title}</p>
-                <p className="mt-3 text-base leading-7 text-white/74">{step.body}</p>
-              </div>
-            ))}
           </div>
         </Slide>
       </div>

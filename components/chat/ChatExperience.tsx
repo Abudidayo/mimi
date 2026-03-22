@@ -344,11 +344,23 @@ export function ChatExperience({
   return (
     <div
       className="flex flex-col h-screen overflow-hidden"
-      style={{
-        background: isChat
-          ? "linear-gradient(180deg, #11265b 0%, #0c1d49 42%, #081338 100%)"
-          : "linear-gradient(180deg, #3d7ecc 0%, #1d4d9e 38%, #102966 68%, #09183e 100%)",
-      }}
+      style={
+        isChat
+          ? {
+              backgroundColor: "#111111",
+              backgroundImage: [
+                "radial-gradient(ellipse 125% 90% at 50% 100%, rgba(36, 58, 108, 0.28) 0%, rgba(22, 38, 78, 0.22) 42%, transparent 66%)",
+                "radial-gradient(ellipse 95% 68% at 18% 100%, rgba(45, 72, 130, 0.18) 0%, transparent 50%)",
+                "radial-gradient(ellipse 95% 68% at 82% 100%, rgba(45, 72, 130, 0.18) 0%, transparent 50%)",
+              ].join(", "),
+              backgroundRepeat: "no-repeat",
+              backgroundSize: "100% 100%",
+            }
+          : {
+              background:
+                "linear-gradient(180deg, #3d7ecc 0%, #1d4d9e 38%, #102966 68%, #09183e 100%)",
+            }
+      }
     >
       <AnimatePresence>
         {isReplanning && (
@@ -357,7 +369,7 @@ export function ChatExperience({
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden shrink-0"
-            style={{ background: "rgba(30,70,160,0.7)", backdropFilter: "blur(12px)" }}
+            style={{ background: "rgba(17,17,17,0.92)", backdropFilter: "blur(12px)" }}
           >
             <div className="max-w-3xl mx-auto px-4 py-2 flex items-center justify-center gap-2 text-white text-sm font-medium">
               <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}>
@@ -411,7 +423,7 @@ export function ChatExperience({
                 onClick={() => {
                   void handleReturnHome();
                 }}
-                className="inline-flex items-center gap-2 rounded-full border border-white/18 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_32px_rgba(8,19,56,0.22)] backdrop-blur-md transition-all duration-200 hover:bg-white/16"
+                className="inline-flex items-center gap-2 rounded-full border border-white/18 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_32px_rgba(0,0,0,0.25)] backdrop-blur-md transition-all duration-200 hover:bg-white/16"
               >
                 <span className="inline-flex items-center gap-1.5 sm:hidden">
                   <House weight="fill" className="h-4 w-4" />
